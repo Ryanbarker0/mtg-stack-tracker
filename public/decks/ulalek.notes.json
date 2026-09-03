@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ulalek-multiple",
+    "title": "Why Ulalek's trigger is on the stack more than once",
+    "cards": ["Ulalek, Fused Atrocity", "Echoes of Eternity"],
+    "body": "Echoes of Eternity makes every trigger of a colorless permanent I control trigger twice, and Ulalek is colorless. So one Eldrazi cast gives two Ulalek triggers. When the top one resolves and I pay {C}{C}, it copies everything else on the stack, including the other Ulalek trigger. That copy is now on top. Each time I pay, another copy of the original Ulalek trigger is made. The chain only stops when I stop paying, or when the original Ulalek trigger itself resolves with no other Ulalek trigger left to copy."
+  },
+  {
+    "id": "copies-not-cast",
+    "title": "Copies are not cast",
+    "cards": ["Ulalek, Fused Atrocity", "Echoes of Eternity", "Ulamog, the Ceaseless Hunger"],
+    "body": "A copy of a spell is put straight onto the stack. It was never cast, so nothing that says \"when you cast\" or \"whenever you cast\" fires for it: not Ulamog's exile, not Ulalek, not Echoes, not Monument, not cascade. A copy of a creature spell becomes a token when it resolves. What Ulalek copies of triggers do is repeat the trigger's effect, which is where the extra exiles, life and cards come from."
+  },
+  {
+    "id": "echoes-two-lines",
+    "title": "Echoes of Eternity does two different things",
+    "cards": ["Echoes of Eternity"],
+    "body": "Line one: triggers of my colorless spells and other colorless permanents trigger one extra time. That includes lands like Sanctum of Ugin. It does not apply to copies Ulalek makes, and it does not apply to Echoes' own trigger. Line two: whenever I cast a colorless spell, a trigger goes on the stack, and when that trigger resolves it copies the spell. Ulalek can copy that trigger, and each copy of it makes another copy of the spell when it resolves."
+  },
+  {
+    "id": "zhulodok-cascade",
+    "title": "Zhulodok and the cascades",
+    "cards": ["Zhulodok, Void Gorger"],
+    "body": "A colorless spell with mana value 7 or more that I cast from my hand gets two cascades. Each cascade is a separate trigger, so with Echoes out that is four. Each one exiles cards until a cheaper nonland card and lets me cast it for free. That card is cast, so Ulalek, Echoes and Monument all trigger again, but it is cast from exile, not my hand, so it does not get cascade itself. Ulalek can copy cascade triggers too."
+  },
+  {
+    "id": "sanctum-once",
+    "title": "Sanctum of Ugin only tutors once",
+    "cards": ["Sanctum of Ugin"],
+    "body": "Sanctum triggers whenever I cast a colorless spell with mana value 7 or more, and Echoes doubles it. Each trigger says I may sacrifice the land. Once it is sacrificed, the other triggers cannot sacrifice it, so they do nothing. I can decline on the first and take a later one if I want to wait."
+  },
+  {
+    "id": "monument-unsealing",
+    "title": "Forsaken Monument and Kozilek's Unsealing",
+    "cards": ["Forsaken Monument", "Kozilek's Unsealing"],
+    "body": "Monument gains 2 life per colorless spell cast, doubled by Echoes, and Ulalek copies those triggers, so the life adds up fast. Unsealing makes two Eldrazi Spawn for a creature spell with mana value 4, 5 or 6, or draws three for mana value 7 or more. Only one of its two lines can trigger for a given spell."
+  },
+  {
+    "id": "guardian-project",
+    "title": "Guardian Project",
+    "cards": ["Guardian Project"],
+    "body": "Draws a card when a nontoken creature enters under my control, if no other creature I control or creature card in my graveyard has the same name. Ulamog tokens from copies do not count. It checks the name when the trigger resolves, so a second Ulamog entering while the first is out draws nothing."
+  },
+  {
+    "id": "path-of-ancestry",
+    "title": "Path of Ancestry's scry",
+    "cards": ["Path of Ancestry"],
+    "body": "If I spend Path's mana on a creature spell that shares a type with Ulalek, that is any Eldrazi, I scry 1. It is a trigger on the stack, so Ulalek can copy it. Echoes does not double it, because it is a delayed trigger created by the mana ability rather than an ability the land has."
+  },
+  {
+    "id": "kozileks-return",
+    "title": "Kozilek's Return from the graveyard",
+    "cards": ["Kozilek's Return"],
+    "body": "With Return in my graveyard, casting an Eldrazi creature with mana value 7 or more lets me exile it to deal 5 to each creature. The app does not watch the graveyard, so I put this trigger on the stack myself from the palette when it applies."
+  },
+  {
+    "id": "strionic-resonator",
+    "title": "Strionic Resonator",
+    "cards": ["Strionic Resonator"],
+    "body": "{2}, {T}: copy a triggered ability I control. Copying a Ulalek trigger gives me another chance to pay {C}{C} and copy the whole stack. It is an activated ability, so if I want Ulalek to copy the Resonator activation too, I activate it before casting the Eldrazi spell."
+  },
+  {
+    "id": "anticausal-warp",
+    "title": "Anticausal Vestige and warp",
+    "cards": ["Anticausal Vestige"],
+    "body": "Casting Vestige for its warp cost is still casting an Eldrazi spell from my hand, so Ulalek and Echoes trigger as normal. It leaves at the next end step, which draws a card and can put a permanent from my hand onto the battlefield."
+  },
+  {
+    "id": "order-and-paying",
+    "title": "Order and paying",
+    "cards": ["Ulalek, Fused Atrocity"],
+    "body": "When several of my triggers happen at once, I choose their order. I put Ulalek's on top so it resolves first and copies the rest. Each Ulalek resolution costs {C}{C} if I want the copies, and I can say no at any point. Copies of triggers go on top of the originals, so the newest Ulalek copy is always next."
+  }
+]

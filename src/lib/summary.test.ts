@@ -39,7 +39,10 @@ describe('groupItems', () => {
 
   it('keeps the keyword title when the item is already named by it', () => {
     const groups = groupItems([
-      item({ title: 'Cascade (Ulamog)', text: 'Cascade. Exile cards from the top of your library...' }),
+      item({
+        title: 'Cascade (Ulamog)',
+        text: 'Cascade. Exile cards from the top of your library...',
+      }),
     ])
     expect(groups.map((g) => g.title)).toEqual(['Cascade (Ulamog)'])
   })

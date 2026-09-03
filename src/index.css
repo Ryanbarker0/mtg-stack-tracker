@@ -1170,3 +1170,34 @@ a {
 .stack-item .origin.expanded {
   white-space: normal;
 }
+
+/* Insight panel and notes */
+
+.steps {
+  margin: 6px 0 0;
+  padding-left: 22px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.steps li + li {
+  margin-top: 2px;
+}
+
+.note-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.stack-item .actions button.info {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}

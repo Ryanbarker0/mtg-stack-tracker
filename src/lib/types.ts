@@ -61,10 +61,20 @@ export interface DeckEntry {
   isCommander: boolean
 }
 
+/** A short note about an interaction in this deck, in the player's own words. */
+export interface DeckNote {
+  id: string
+  title: string
+  body: string
+  /** Card names the note is about. The insight panel shows the note for items from these cards. */
+  cards: string[]
+}
+
 export interface Deck {
   id: string
   name: string
   entries: DeckEntry[]
+  notes?: DeckNote[]
   createdAt: string
   updatedAt: string
 }

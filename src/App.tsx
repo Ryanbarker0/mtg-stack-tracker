@@ -4,6 +4,8 @@ import { DeckImport } from './components/DeckImport'
 import { DeckList } from './components/DeckList'
 import { DeckPicker } from './components/DeckPicker'
 import { HistoryPanel } from './components/HistoryPanel'
+import { InsightPanel } from './components/InsightPanel'
+import { NotesPanel } from './components/NotesPanel'
 import { Palette } from './components/Palette'
 import { QuickAdd } from './components/QuickAdd'
 import { StackView } from './components/StackView'
@@ -16,7 +18,7 @@ import {
   type CastFrom,
   type Suggestion,
 } from './lib/triggers'
-import type { BattlefieldPermanent, Card, Deck } from './lib/types'
+import type { BattlefieldPermanent, Card, Deck, StackItem } from './lib/types'
 import {
   YOU,
   newId,
@@ -44,7 +46,8 @@ export default function App() {
   const { game, dispatch, undo, redo, canUndo, canRedo } = useGame()
   const [screen, setScreen] = useState<Screen | null>(null)
   const [detail, setDetail] = useState<Card | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
+  const [panel, setPanel] = useState<'stack' | 'log' | 'notes'>('stack')
+  const [insight, setInsight] = useState<StackItem | null>(null)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [pickingHit, setPickingHit] = useState(false)
   /** The stack item currently animating off the top, if any. */
@@ -70,7 +73,7 @@ export default function App() {
 
   const startGame = (deck: Deck) => {
     dispatch({ type: 'newGame', commanders: commanders(deck) })
-    setShowHistory(false)
+    setPanel('stack')
     setSheet(null)
     setPickingHit(false)
   }
@@ -256,10 +259,17 @@ export default function App() {
                 ↷ Redo
               </button>
               <button
-                className={showHistory ? 'primary' : ''}
-                onClick={() => setShowHistory((v) => !v)}
+                className={panel === 'log' ? 'primary' : ''}
+                onClick={() => setPanel(panel === 'log' ? 'stack' : 'log')}
               >
                 Log{game.history.length > 0 ? ` (${game.history.length})` : ''}
+              </button>
+              <button
+                className={panel === 'notes' ? 'primary' : ''}
+                onClick={() => setPanel(panel === 'notes' ? 'stack' : 'notes')}
+                title="Deck notes"
+              >
+                Notes{decks.activeDeck.notes?.length ? ` (${decks.activeDeck.notes.length})` : ''}
               </button>
               <button
                 className="danger"
@@ -301,12 +311,19 @@ export default function App() {
                 />
               </div>
               <div className="pane-body">
-                {showHistory ? (
+                {panel === 'log' && (
                   <HistoryPanel
                     history={game.history}
                     onClear={() => dispatch({ type: 'clearHistory' })}
                   />
-                ) : (
+                )}
+                {panel === 'notes' && (
+                  <NotesPanel
+                    notes={decks.activeDeck.notes ?? []}
+                    onChange={(notes) => decks.updateDeck({ ...decks.activeDeck!, notes })}
+                  />
+                )}
+                {panel === 'stack' && (
                   <StackView
                     game={game}
                     dispatch={dispatch}
@@ -318,6 +335,7 @@ export default function App() {
                     untilDecision={untilDecision}
                     onResolveUntilDecision={resolveUntilDecision}
                     onShowCard={setDetail}
+                    onInsight={setInsight}
                   />
                 )}
               </div>
@@ -361,6 +379,15 @@ export default function App() {
             cast(card, 0, 'elsewhere')
           }}
           onCancel={() => setPickingHit(false)}
+        />
+      )}
+
+      {insight && (
+        <InsightPanel
+          item={insight}
+          stack={game.stack}
+          notes={decks.activeDeck?.notes ?? []}
+          onClose={() => setInsight(null)}
         />
       )}
 

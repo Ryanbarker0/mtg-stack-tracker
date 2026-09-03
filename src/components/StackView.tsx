@@ -20,6 +20,8 @@ interface Props {
   auto: { done: number; total: number } | null
   onStopAuto: () => void
   onShowCard: (card: Card) => void
+  /** Opens the insight panel for an item. */
+  onInsight: (item: StackItem) => void
 }
 
 /**
@@ -38,6 +40,7 @@ export function StackView({
   auto,
   onStopAuto,
   onShowCard,
+  onInsight,
 }: Props) {
   // Items created after this view mounted slide in; the ones already there on load do not.
   const [mountedAt] = useState(() => Date.now())
@@ -106,6 +109,7 @@ export function StackView({
             onResolveTop={onResolveTop}
             onCascadeHit={onCascadeHit}
             onShowCard={onShowCard}
+            onInsight={onInsight}
           />
         ))}
       </div>
@@ -132,6 +136,7 @@ interface RowProps {
   onResolveTop: () => void
   onCascadeHit: () => void
   onShowCard: (card: Card) => void
+  onInsight: (item: StackItem) => void
 }
 
 function StackRow({
@@ -148,6 +153,7 @@ function StackRow({
   onResolveTop,
   onCascadeHit,
   onShowCard,
+  onInsight,
 }: RowProps) {
   const [expanded, setExpanded] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
@@ -299,6 +305,14 @@ function StackRow({
             title="Copy this spell or ability"
           >
             ⧉
+          </button>
+          <button
+            className="icon info"
+            onClick={() => onInsight(item)}
+            aria-label="Why is this here?"
+            title="Why is this here?"
+          >
+            i
           </button>
           <button
             className="icon"

@@ -3,7 +3,7 @@ import { castTriggerTypes, includedByDefault, inclusionReason } from '../lib/abi
 import { Caveats } from './Caveats'
 import { parseDecklist } from '../lib/decklist'
 import { lookupDecklist } from '../lib/scryfall'
-import type { Card, Deck, DeckEntry, DecklistLine } from '../lib/types'
+import type { Card, Deck, DeckEntry, DeckNote, DecklistLine } from '../lib/types'
 import { newId } from '../state/game'
 
 interface Props {
@@ -16,6 +16,8 @@ interface Preset {
   id: string
   name: string
   file: string
+  /** Optional JSON file of DeckNote[] shipped with the list. */
+  notes?: string
   note?: string
 }
 
@@ -53,6 +55,7 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
   const [step, setStep] = useState<Step>({ name: 'paste' })
   const [error, setError] = useState<string | null>(null)
   const [presets, setPresets] = useState<Preset[]>([])
+  const [presetNotes, setPresetNotes] = useState<DeckNote[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -71,6 +74,12 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
       if (!response.ok) throw new Error(`Could not load ${preset.name}`)
       setText(await response.text())
       if (!name) setName(preset.name)
+      if (preset.notes) {
+        const notesResponse = await fetch(`${import.meta.env.BASE_URL}decks/${preset.notes}`)
+        setPresetNotes(notesResponse.ok ? ((await notesResponse.json()) as DeckNote[]) : [])
+      } else {
+        setPresetNotes([])
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not load the preset')
     }
@@ -116,6 +125,7 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
       id: newId(),
       name: name.trim() || 'Untitled deck',
       entries: step.entries,
+      notes: presetNotes,
       createdAt: now,
       updatedAt: now,
     })
