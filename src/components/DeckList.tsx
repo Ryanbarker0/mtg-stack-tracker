@@ -1,4 +1,5 @@
 import type { Deck } from '../lib/types'
+import { Caveats } from './Caveats'
 
 interface Props {
   decks: Deck[]
@@ -50,6 +51,7 @@ export function DeckList({ decks, activeDeckId, onPlay, onDelete, onImport }: Pr
         )
       })}
 
+      <Caveats open={decks.length === 0} />
       <p className="faint">
         Decks and card data are stored on this device. Card text and rulings come from Scryfall and
         are cached so games work offline.

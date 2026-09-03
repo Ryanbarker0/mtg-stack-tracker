@@ -996,3 +996,53 @@ a {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+/* Caveats */
+
+.caveats {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  padding: 0 14px;
+}
+
+.caveats summary {
+  cursor: pointer;
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  list-style: none;
+}
+
+.caveats summary::-webkit-details-marker {
+  display: none;
+}
+
+.caveats summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 18px;
+  color: var(--text-muted);
+  transition: transform 120ms ease;
+}
+
+.caveats[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.caveats > div {
+  padding: 0 0 14px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.caveats ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+}
+
+.caveats li + li {
+  margin-top: 2px;
+}

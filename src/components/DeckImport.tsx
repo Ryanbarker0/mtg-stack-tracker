@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { castTriggerTypes, includedByDefault, inclusionReason } from '../lib/abilities'
+import { Caveats } from './Caveats'
 import { parseDecklist } from '../lib/decklist'
 import { lookupDecklist } from '../lib/scryfall'
 import type { Card, Deck, DeckEntry, DecklistLine } from '../lib/types'
@@ -91,6 +92,7 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
 
       {step.name === 'paste' && (
         <>
+          <Caveats open />
           <textarea
             rows={16}
             placeholder={PLACEHOLDER}

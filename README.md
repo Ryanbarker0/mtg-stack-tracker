@@ -87,6 +87,8 @@ The app installs as a standalone PWA and updates itself on the next launch after
 
 ## Known limitations
 
+The same list is shown in the app on the deck and import screens, so anyone using it sees it before trusting the suggestions.
+
 - Archidekt blocks browser requests from other origins, so decks are imported by pasting the text export rather than by URL.
 - Ability classification is text-based.
   Unusual wording may be misclassified, which is why the import review exists.
