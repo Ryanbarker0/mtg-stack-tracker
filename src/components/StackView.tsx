@@ -13,6 +13,11 @@ interface Props {
   /** How many items would resolve with no decision, and the action to do it. */
   untilDecision: number
   onResolveUntilDecision: () => void
+  /** Item animating off the top right now, if any. */
+  leavingId: string | null
+  /** Progress of an automatic run, if one is going. */
+  auto: { done: number; total: number } | null
+  onStopAuto: () => void
   onShowCard: (card: Card) => void
 }
 
@@ -28,6 +33,9 @@ export function StackView({
   onCascadeHit,
   untilDecision,
   onResolveUntilDecision,
+  leavingId,
+  auto,
+  onStopAuto,
   onShowCard,
 }: Props) {
   const items = [...game.stack].reverse()
@@ -45,19 +53,33 @@ export function StackView({
   return (
     <>
       <StackSummary stack={game.stack} />
-      {untilDecision >= 2 && (
-        <div className="row" style={{ marginBottom: 12 }}>
-          <button
-            onClick={onResolveUntilDecision}
-            title="Resolve items from the top until one needs a choice"
-          >
-            ⏬ Resolve {untilDecision} until the next choice
-          </button>
-          <span className="faint" style={{ fontSize: 13 }}>
-            Stops at a payment, a sacrifice, a cascade hit, an opponent’s item, or a permanent with
-            enters triggers.
+      {auto ? (
+        <div className="row auto-run" style={{ marginBottom: 12 }}>
+          <span className="progress" style={{ flex: 1 }}>
+            <span style={{ width: `${(auto.done / Math.max(1, auto.total)) * 100}%` }} />
           </span>
+          <span className="muted" style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>
+            Resolving {auto.done} of {auto.total}
+          </span>
+          <button className="danger" onClick={onStopAuto}>
+            Stop
+          </button>
         </div>
+      ) : (
+        untilDecision >= 2 && (
+          <div className="row" style={{ marginBottom: 12 }}>
+            <button
+              onClick={onResolveUntilDecision}
+              title="Resolve items from the top until one needs a choice"
+            >
+              ⏬ Resolve {untilDecision} until the next choice
+            </button>
+            <span className="faint" style={{ fontSize: 13 }}>
+              Stops at a payment, a sacrifice, a cascade hit, an opponent’s item, or a permanent
+              with enters triggers.
+            </span>
+          </div>
+        )
       )}
       <div className="stack-list">
         {items.map((item, index) => (
@@ -75,6 +97,7 @@ export function StackView({
                 : 0
             }
             siblings={index === 0 ? siblingsOf(game.stack, item).length : 0}
+            leaving={item.id === leavingId}
             dispatch={dispatch}
             onResolveTop={onResolveTop}
             onCascadeHit={onCascadeHit}
@@ -97,6 +120,8 @@ interface RowProps {
   othersToCopy: number
   /** For the top item, how many other instances of the same trigger are on the stack. */
   siblings: number
+  /** True while this item animates off the stack. */
+  leaving: boolean
   dispatch: (action: GameAction) => void
   onResolveTop: () => void
   onCascadeHit: () => void
@@ -111,6 +136,7 @@ function StackRow({
   refersToTitle,
   othersToCopy,
   siblings,
+  leaving,
   dispatch,
   onResolveTop,
   onCascadeHit,
@@ -121,7 +147,7 @@ function StackRow({
   const opponent = item.controller !== YOU
 
   return (
-    <div className={`stack-item ${isTop ? 'top' : ''}`}>
+    <div className={`stack-item ${isTop ? 'top' : ''} ${leaving ? 'leaving' : ''}`}>
       <span className={`bar bar-${item.kind}`} />
       {item.imageUrl ? (
         <img

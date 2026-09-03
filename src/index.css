@@ -1046,3 +1046,60 @@ a {
 .caveats li + li {
   margin-top: 2px;
 }
+
+/* Resolution animation */
+
+.stack-list {
+  position: relative;
+}
+
+.stack-item {
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.stack-item.leaving {
+  animation: resolve-out 260ms ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes resolve-out {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--accent-soft),
+      var(--shadow);
+  }
+  35% {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      0 0 32px rgba(124, 92, 255, 0.55);
+  }
+  100% {
+    transform: translateY(-28px) scale(0.96);
+    opacity: 0;
+    box-shadow: none;
+  }
+}
+
+.auto-run .progress {
+  height: 8px;
+}
+
+.auto-run .progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack-item,
+  .stack-item.leaving {
+    transition: none;
+    animation: none;
+  }
+}

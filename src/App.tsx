@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CardDetail } from './components/CardDetail'
 import { DeckImport } from './components/DeckImport'
 import { DeckList } from './components/DeckList'
@@ -45,6 +45,16 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [pickingHit, setPickingHit] = useState(false)
+  /** The stack item currently animating off the top, if any. */
+  const [leavingId, setLeavingId] = useState<string | null>(null)
+  /** Progress of an in-flight "resolve until the next choice" run. */
+  const [auto, setAuto] = useState<{ done: number; total: number } | null>(null)
+  const gameRef = useRef(game)
+  const timer = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    gameRef.current = game
+  }, [game])
+  useEffect(() => () => window.clearTimeout(timer.current), [])
 
   if (!decks.loaded) return null
 
@@ -118,23 +128,69 @@ export default function App() {
     })
   }
 
+  const LEAVE_MS = 260
+  const GAP_MS = 90
+
+  /** Animates the top item off, then runs `after`. Ignored while another item is leaving. */
+  const animateTop = (after: () => void) => {
+    const top = gameRef.current.stack[gameRef.current.stack.length - 1]
+    if (!top || leavingId !== null) return
+    setLeavingId(top.id)
+    timer.current = window.setTimeout(() => {
+      setLeavingId(null)
+      after()
+    }, LEAVE_MS)
+  }
+
   const resolveTop = () => {
     const top = game.stack[game.stack.length - 1]
     if (!top) return
-    dispatch({ type: 'resolveTop' })
-    const entering = permanentFromResolved(top)
-    if (entering && top.controller === YOU) offerEnters(entering, [...game.battlefield, entering])
+    animateTop(() => {
+      dispatch({ type: 'resolveTop' })
+      const entering = permanentFromResolved(top)
+      if (entering && top.controller === YOU) {
+        offerEnters(entering, [...gameRef.current.battlefield, entering])
+      }
+    })
   }
 
   const cascadeHit = () => {
-    dispatch({ type: 'resolveTop' })
-    setPickingHit(true)
+    animateTop(() => {
+      dispatch({ type: 'resolveTop' })
+      setPickingHit(true)
+    })
   }
 
   const untilDecision = resolvableWithoutDecision(game, commanderIds)
+
+  const stopAuto = () => {
+    window.clearTimeout(timer.current)
+    setLeavingId(null)
+    setAuto(null)
+  }
+
+  /** Resolves one quiet item at a time with the leave animation, until a decision is needed. */
+  const runAuto = (done: number, total: number) => {
+    const current = gameRef.current
+    const remaining = resolvableWithoutDecision(current, commanderIds)
+    if (done >= total || remaining === 0) {
+      setAuto(null)
+      return
+    }
+    const top = current.stack[current.stack.length - 1]
+    setLeavingId(top.id)
+    timer.current = window.setTimeout(() => {
+      dispatch({ type: 'resolveTop' })
+      setLeavingId(null)
+      setAuto({ done: done + 1, total })
+      timer.current = window.setTimeout(() => runAuto(done + 1, total), GAP_MS)
+    }, LEAVE_MS)
+  }
+
   const resolveUntilDecision = () => {
-    if (untilDecision === 0) return
-    dispatch({ type: 'resolveMany', count: untilDecision })
+    if (untilDecision === 0 || auto || leavingId !== null) return
+    setAuto({ done: 0, total: untilDecision })
+    runAuto(0, untilDecision)
   }
 
   return (
@@ -236,6 +292,9 @@ export default function App() {
                   <StackView
                     game={game}
                     dispatch={dispatch}
+                    leavingId={leavingId}
+                    auto={auto}
+                    onStopAuto={stopAuto}
                     onResolveTop={resolveTop}
                     onCascadeHit={cascadeHit}
                     untilDecision={untilDecision}
