@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { includedByDefault, inclusionReason } from '../lib/abilities'
+import { castTriggerTypes, includedByDefault, inclusionReason } from '../lib/abilities'
 import { parseDecklist } from '../lib/decklist'
 import { lookupDecklist } from '../lib/scryfall'
 import type { Card, Deck, DeckEntry, DecklistLine } from '../lib/types'
@@ -14,7 +14,7 @@ interface Props {
 type Step =
   | { name: 'paste' }
   | { name: 'loading'; done: number; total: number }
-  | { name: 'review'; entries: DeckEntry[]; notFound: DecklistLine[] }
+  | { name: 'review'; entries: DeckEntry[]; notFound: DecklistLine[]; watchedTypes: string[] }
 
 const PLACEHOLDER = `Paste a decklist. Archidekt: Export → Text. Moxfield: Export → Copy.
 
@@ -25,8 +25,8 @@ const PLACEHOLDER = `Paste a decklist. Archidekt: Export → Text. Moxfield: Exp
 
 /**
  * Three steps: paste a list, look every card up on Scryfall, then review which cards
- * appear in the game palette. Cards with a triggered or activated ability are ticked by
- * default; the user can override any card.
+ * appear in the game palette. See includedByDefault for the default tick rule; the user
+ * can override any card.
  */
 export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
   const [text, setText] = useState('')
@@ -46,12 +46,11 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
       const result = await lookupDecklist(lines, (done, total) =>
         setStep({ name: 'loading', done, total }),
       )
-      const entries = mergeEntries(result.found)
-      if (!name) {
-        const commander = entries.find((e) => e.isCommander)
-        if (commander) setName(commander.card.name)
-      }
-      setStep({ name: 'review', entries, notFound: result.notFound })
+      const commanders = result.found.filter((f) => f.line.isCommander).map((f) => f.card)
+      const watchedTypes = castTriggerTypes(commanders)
+      const entries = mergeEntries(result.found, watchedTypes)
+      if (!name && commanders.length > 0) setName(commanders[0].name)
+      setStep({ name: 'review', entries, notFound: result.notFound, watchedTypes })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Scryfall lookup failed')
       setStep({ name: 'paste' })
@@ -147,12 +146,18 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
             </div>
           )}
 
-          <div className="row">
-            <p className="muted">
-              Ticked cards appear in the game palette. Cards with a triggered or activated ability
-              are ticked for you; tap to change.
-            </p>
-          </div>
+          <p className="muted">
+            Ticked cards appear in the game palette. Instants, sorceries and cards with a triggered
+            or activated ability are ticked for you; tap to change. Anything else can be added
+            mid-game with quick add.
+          </p>
+          {step.watchedTypes.length > 0 && (
+            <div className="notice">
+              Your commander triggers when you cast{' '}
+              <strong>{step.watchedTypes.join(' or ')}</strong> spells, so every card of that type
+              is ticked too.
+            </div>
+          )}
           <ReviewSummary entries={step.entries} />
 
           <div>
@@ -160,6 +165,7 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
               <ReviewRow
                 key={entry.card.scryfallId}
                 entry={entry}
+                watchedTypes={step.watchedTypes}
                 onToggle={() => toggle(entry.card.scryfallId)}
                 onShowCard={() => onShowCard(entry.card)}
               />
@@ -181,7 +187,10 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
   )
 }
 
-function mergeEntries(found: Array<{ line: DecklistLine; card: Card }>): DeckEntry[] {
+function mergeEntries(
+  found: Array<{ line: DecklistLine; card: Card }>,
+  watchedTypes: string[],
+): DeckEntry[] {
   const byId = new Map<string, DeckEntry>()
   for (const { line, card } of found) {
     const existing = byId.get(card.scryfallId)
@@ -192,7 +201,7 @@ function mergeEntries(found: Array<{ line: DecklistLine; card: Card }>): DeckEnt
       byId.set(card.scryfallId, {
         card,
         quantity: line.quantity,
-        included: includedByDefault(card),
+        included: includedByDefault(card, watchedTypes),
         isCommander: line.isCommander,
       })
     }
@@ -215,10 +224,12 @@ function ReviewSummary({ entries }: { entries: DeckEntry[] }) {
 
 function ReviewRow({
   entry,
+  watchedTypes,
   onToggle,
   onShowCard,
 }: {
   entry: DeckEntry
+  watchedTypes: string[]
   onToggle: () => void
   onShowCard: () => void
 }) {
@@ -239,7 +250,7 @@ function ReviewRow({
           {entry.isCommander && <span className="tag commander">Commander</span>}
         </div>
         <div className="summary">
-          {entry.card.typeLine} · {inclusionReason(entry.card)}
+          {entry.card.typeLine} · {inclusionReason(entry.card, watchedTypes)}
         </div>
       </div>
       {entry.card.faces[0].imageUrl && (

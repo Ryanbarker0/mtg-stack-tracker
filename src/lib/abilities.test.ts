@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  castTriggerTypes,
   classifyLine,
   extractAbilities,
   includedByDefault,
@@ -134,5 +135,40 @@ describe('extractAbilities and usesStack', () => {
       ),
     )
     expect(abilities.map((a) => a.kind)).toEqual(['static'])
+  })
+
+  it('reads the spell types a commander triggers on from its oracle text', () => {
+    const ulalek = card(
+      "Devoid (This card has no color.)\nWhenever you cast an Eldrazi spell, you may pay {C}{C}. If you do, copy all spells you control, then copy all other activated and triggered abilities you control. You may choose new targets for the copies. (Mana abilities can't be copied.)",
+      'Legendary Creature — Eldrazi',
+    )
+    expect(castTriggerTypes([ulalek])).toEqual(['Eldrazi'])
+    expect(
+      castTriggerTypes([
+        card(
+          'Whenever you cast an instant or sorcery spell, draw a card.',
+          'Legendary Creature — Human Wizard',
+        ),
+      ]),
+    ).toEqual(['instant', 'sorcery'])
+    expect(castTriggerTypes([card('Flying')])).toEqual([])
+  })
+
+  it('ticks cards of a watched type even without stack abilities, but never lands', () => {
+    const endlessOne = card(
+      'This creature enters with X +1/+1 counters on it.',
+      'Creature — Eldrazi',
+    )
+    const allIsDust = card(
+      'Each player sacrifices all permanents they control that are one or more colors.',
+      'Kindred Sorcery — Eldrazi',
+    )
+    const temple = card('{T}: Add {C}.', 'Land')
+    expect(includedByDefault(endlessOne)).toBe(false)
+    expect(includedByDefault(endlessOne, ['Eldrazi'])).toBe(true)
+    expect(inclusionReason(endlessOne, ['Eldrazi'])).toBe('Eldrazi spell')
+    expect(inclusionReason(allIsDust, ['Eldrazi'])).toBe('Eldrazi spell, sorcery')
+    expect(includedByDefault(temple, ['Eldrazi', 'Land'])).toBe(false)
+    expect(includedByDefault(card('Flying', 'Creature — Human'), ['Eldrazi'])).toBe(false)
   })
 })

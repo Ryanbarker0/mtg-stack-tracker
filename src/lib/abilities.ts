@@ -186,25 +186,66 @@ export function isInstantOrSorcery(card: Card): boolean {
 }
 
 /**
+ * Spell types a commander cares about being cast, read from its own oracle text.
+ *
+ * "Whenever you cast an Eldrazi spell" yields ["Eldrazi"]; "Whenever you cast an instant
+ * or sorcery spell" yields ["instant", "sorcery"]. Only words that can appear on a type
+ * line are useful here; a qualifier such as "colorless" is returned but will match nothing.
+ */
+export function castTriggerTypes(commanders: Card[]): string[] {
+  const types = new Set<string>()
+  for (const card of commanders) {
+    for (const ability of extractAbilities(card)) {
+      if (ability.kind !== 'triggered') continue
+      const text = ability.text.replace(/\s*\([^)]*\)/g, '')
+      for (const match of text.matchAll(
+        /\byou cast (?:a|an|your first|another|one or more) ([A-Za-z][A-Za-z\- ]*?) spells?\b/gi,
+      )) {
+        for (const word of match[1].split(/\s*(?:,|\bor\b)\s*/)) {
+          const cleaned = word.trim()
+          if (cleaned !== '') types.add(cleaned)
+        }
+      }
+    }
+  }
+  return [...types]
+}
+
+/** True if any nonland face of the card carries one of the given types on its type line. */
+export function hasSpellType(card: Card, types: string[]): boolean {
+  return card.faces.some(
+    (f) =>
+      !isLand(f) && types.some((t) => new RegExp(`\\b${escapeRegExp(t)}\\b`, 'i').test(f.typeLine)),
+  )
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
  * Whether a card belongs in the game palette by default.
  *
  * Every nonland card uses the stack when cast (CR 601), so in principle the whole deck
  * qualifies. The palette exists to cut the deck down to what matters mid-turn, so the
- * default picks cards that either have an ability that uses the stack, or are instants
- * and sorceries, which exist nowhere but the stack and are exactly what a copy effect
- * like Ulalek's wants. Ability-less permanents such as mana rocks are left out; the user
- * can tick them at import or add them mid-game with quick add.
+ * default picks cards that have an ability that uses the stack, instants and sorceries,
+ * which exist nowhere but the stack, and any spell whose type the commander's own
+ * cast trigger names, since casting those is what sets the turn off. Ability-less
+ * permanents such as mana rocks are left out; the user can tick them at import or add
+ * them mid-game with quick add.
  */
-export function includedByDefault(card: Card): boolean {
-  return hasStackAbility(card) || isInstantOrSorcery(card)
+export function includedByDefault(card: Card, watchedTypes: string[] = []): boolean {
+  return hasStackAbility(card) || isInstantOrSorcery(card) || hasSpellType(card, watchedTypes)
 }
 
 /** Short reason shown at import for why a card is or is not ticked. */
-export function inclusionReason(card: Card): string {
+export function inclusionReason(card: Card, watchedTypes: string[] = []): string {
   const abilities = extractAbilities(card)
   const triggered = abilities.filter((a) => a.kind === 'triggered').length
   const activated = abilities.filter((a) => a.kind === 'activated').length
   const parts: string[] = []
+  const watched = watchedTypes.filter((t) => hasSpellType(card, [t]))
+  if (watched.length > 0) parts.push(`${watched.join(' ')} spell`)
   if (isInstantOrSorcery(card))
     parts.push(card.faces.some((f) => /\bInstant\b/.test(f.typeLine)) ? 'instant' : 'sorcery')
   if (triggered) parts.push(`${triggered} triggered`)

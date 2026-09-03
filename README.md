@@ -14,6 +14,7 @@ It makes the stack visible to you and to the table, and keeps the order honest.
   No card text is hand-authored or assumed.
 - Each paragraph of oracle text is classified as triggered, activated, mana or static.
   Instants, sorceries and cards with a triggered or activated ability are ticked for the in-game palette by default, and you can override any card.
+  If the commander's text says "whenever you cast a(n) X spell", every card of type X is ticked as well, so for Ulalek all Eldrazi spells are in the palette.
   Every nonland card uses the stack when cast, so anything left unticked can still be added mid-game with quick add.
 - In a game, tap an ability to put it on the stack, or tap Cast to put the card on as a spell.
 - The stack is drawn top-first.
