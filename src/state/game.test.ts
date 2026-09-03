@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { YOU, emptyGame, gameReducer, type GameAction } from './game'
+import { YOU, emptyGame, gameReducer, resolvableWithoutDecision, type GameAction } from './game'
 import { itemForSpell } from '../lib/stackItems'
 import type { Card, GameState, StackItem } from '../lib/types'
 
@@ -288,5 +288,46 @@ describe('gameReducer', () => {
     state = gameReducer(state, { type: 'resolveTop' })
     expect(state.stack).toHaveLength(1)
     expect(state.history.map((h) => h.outcome)).toEqual(['resolved'])
+  })
+
+  it('counts how many items resolve without a decision and stops at the first choice', () => {
+    const ulalekText =
+      'Whenever you cast an Eldrazi spell, you may pay {C}{C}. If you do, copy all spells you control, then copy all other activated and triggered abilities you control.'
+    const state = run(
+      push('Ulamog', YOU, 'spell'),
+      {
+        type: 'push',
+        item: { kind: 'triggered', controller: YOU, title: 'Ulalek', text: ulalekText },
+      },
+      push('Kyle counterspell', 'Kyle', 'spell'),
+      push('Monument trigger', YOU, 'triggered'),
+      push('Monument trigger', YOU, 'triggered'),
+      push('Draw four', YOU, 'triggered'),
+    )
+    // Top three are quiet; Kyle's spell stops the run.
+    expect(resolvableWithoutDecision(state, new Set())).toBe(3)
+    const after = gameReducer(state, { type: 'resolveMany', count: 3 })
+    expect(titles(after)).toEqual(['Ulamog', 'Ulalek', 'Kyle counterspell'])
+    // Once Kyle's spell is gone, Ulalek's pay choice stops it immediately.
+    const next = gameReducer(after, { type: 'resolveTop' })
+    expect(resolvableWithoutDecision(next, new Set())).toBe(0)
+  })
+
+  it('stops before a cascade trigger', () => {
+    const state = run(
+      push('Ulamog', YOU, 'spell'),
+      {
+        type: 'push',
+        item: {
+          kind: 'triggered',
+          controller: YOU,
+          title: 'Ulamog',
+          text: 'Cascade (granted by Zhulodok). ...',
+          onResolve: 'cascade',
+        },
+      },
+      push('Monument trigger', YOU, 'triggered'),
+    )
+    expect(resolvableWithoutDecision(state, new Set())).toBe(1)
   })
 })

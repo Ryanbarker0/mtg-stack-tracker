@@ -136,8 +136,8 @@ describe('granted abilities', () => {
     const cascade = result.find((s) => s.ability.fromKeyword)
     expect(cascade).toMatchObject({
       source: kozilek,
-      certain: undefined,
-      uncertainReason: 'from your hand',
+      certain: true,
+      dependsOnCastFrom: true,
       times: 4,
       doubledBy: 'Zhulodok, Void Gorger + Echoes of Eternity',
     })
@@ -145,6 +145,13 @@ describe('granted abilities', () => {
       /^Cascade \(granted by Zhulodok, Void Gorger\)\. When you cast one, exile cards/,
     )
     expect(castTriggers(counterspell, 0, [onField(zhulodok)], new Set())).toEqual([])
+  })
+
+  it('drops the granted cascade when the spell is cast from somewhere other than the hand', () => {
+    const fromExile = castTriggers(kozilek, 0, [onField(zhulodok)], new Set(), 'elsewhere')
+    expect(fromExile.some((s) => s.ability.fromKeyword)).toBe(false)
+    const fromHand = castTriggers(kozilek, 0, [onField(zhulodok)], new Set(), 'hand')
+    expect(fromHand.some((s) => s.ability.fromKeyword && s.certain === true)).toBe(true)
   })
 
   it('marks an own cast trigger with an intervening if as uncertain', () => {

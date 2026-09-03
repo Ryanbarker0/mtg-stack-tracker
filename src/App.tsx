@@ -2,15 +2,28 @@ import { useState } from 'react'
 import { CardDetail } from './components/CardDetail'
 import { DeckImport } from './components/DeckImport'
 import { DeckList } from './components/DeckList'
+import { DeckPicker } from './components/DeckPicker'
 import { HistoryPanel } from './components/HistoryPanel'
 import { Palette } from './components/Palette'
 import { QuickAdd } from './components/QuickAdd'
 import { StackView } from './components/StackView'
 import { TriggerSheet } from './components/TriggerSheet'
 import { itemForAbility, itemForSpell } from './lib/stackItems'
-import { castTriggers, entersTriggers, type Suggestion } from './lib/triggers'
+import {
+  castTriggers,
+  entersTriggers,
+  isCascade,
+  type CastFrom,
+  type Suggestion,
+} from './lib/triggers'
 import type { BattlefieldPermanent, Card, Deck } from './lib/types'
-import { YOU, newId, permanentFromResolved, type NewItem } from './state/game'
+import {
+  YOU,
+  newId,
+  permanentFromResolved,
+  resolvableWithoutDecision,
+  type NewItem,
+} from './state/game'
 import { useDecks } from './state/useDecks'
 import { useGame } from './state/useGame'
 
@@ -20,8 +33,8 @@ interface Sheet {
   title: string
   subtitle: string
   suggestions: Suggestion[]
-  /** The spell whose cast produced these suggestions, if any. */
-  spellId?: string
+  /** For cast sheets: the spell, so suggestions can be recomputed when cast-from changes. */
+  cast?: { spellId: string; card: Card; faceIndex: number; castFrom: CastFrom }
 }
 
 export default function App() {
@@ -31,6 +44,7 @@ export default function App() {
   const [detail, setDetail] = useState<Card | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [sheet, setSheet] = useState<Sheet | null>(null)
+  const [pickingHit, setPickingHit] = useState(false)
 
   if (!decks.loaded) return null
 
@@ -46,6 +60,7 @@ export default function App() {
     dispatch({ type: 'newGame', commanders: commanders(deck) })
     setShowHistory(false)
     setSheet(null)
+    setPickingHit(false)
   }
 
   const play = (deck: Deck) => {
@@ -60,23 +75,47 @@ export default function App() {
       Array.from({ length: s.times }, () => ({
         ...itemForAbility(s.source, s.ability),
         ...(s.copiesSpell && spellId ? { onResolve: 'copySpell' as const, refersTo: spellId } : {}),
+        ...(isCascade(s.ability.text) ? { onResolve: 'cascade' as const } : {}),
       })),
     )
 
-  const cast = (card: Card, faceIndex: number) => {
+  const openCastSheet = (
+    spellId: string,
+    card: Card,
+    faceIndex: number,
+    castFrom: CastFrom,
+    battlefield: BattlefieldPermanent[],
+  ) => {
+    const suggestions = castTriggers(card, faceIndex, battlefield, commanderIds, castFrom)
+    if (suggestions.length === 0) {
+      setSheet(null)
+      return
+    }
+    setSheet({
+      title: `Casting ${card.faces[faceIndex]?.name ?? card.name}`,
+      subtitle:
+        'These abilities trigger on the cast. They go on the stack above the spell in this order, so the last row ends up on top.',
+      suggestions,
+      cast: { spellId, card, faceIndex, castFrom },
+    })
+  }
+
+  const cast = (card: Card, faceIndex: number, castFrom: CastFrom = 'hand') => {
     // The spell gets its id up front so its triggers can refer back to it.
     const spellId = newId()
     dispatch({ type: 'push', item: { ...itemForSpell(card, faceIndex), id: spellId } })
-    const suggestions = castTriggers(card, faceIndex, game.battlefield, commanderIds)
-    if (suggestions.length > 0) {
-      setSheet({
-        spellId,
-        title: `Casting ${card.faces[faceIndex]?.name ?? card.name}`,
-        subtitle:
-          'These abilities trigger on the cast. They go on the stack above the spell in this order, so the last row ends up on top.',
-        suggestions,
-      })
-    }
+    openCastSheet(spellId, card, faceIndex, castFrom, game.battlefield)
+  }
+
+  /** Offers enters triggers for a permanent that just resolved, if any. */
+  const offerEnters = (entering: BattlefieldPermanent, battlefield: BattlefieldPermanent[]) => {
+    const suggestions = entersTriggers(entering, battlefield, commanderIds)
+    if (suggestions.length === 0) return
+    setSheet({
+      title: `${entering.card.faces[entering.faceIndex]?.name ?? entering.card.name} entered`,
+      subtitle: 'These abilities trigger on it entering the battlefield.',
+      suggestions,
+    })
   }
 
   const resolveTop = () => {
@@ -84,16 +123,18 @@ export default function App() {
     if (!top) return
     dispatch({ type: 'resolveTop' })
     const entering = permanentFromResolved(top)
-    if (!entering || top.controller !== YOU) return
-    const battlefield: BattlefieldPermanent[] = [...game.battlefield, entering]
-    const suggestions = entersTriggers(entering, battlefield, commanderIds)
-    if (suggestions.length > 0) {
-      setSheet({
-        title: `${entering.card.faces[entering.faceIndex]?.name ?? entering.card.name} entered`,
-        subtitle: 'These abilities trigger on it entering the battlefield.',
-        suggestions,
-      })
-    }
+    if (entering && top.controller === YOU) offerEnters(entering, [...game.battlefield, entering])
+  }
+
+  const cascadeHit = () => {
+    dispatch({ type: 'resolveTop' })
+    setPickingHit(true)
+  }
+
+  const untilDecision = resolvableWithoutDecision(game, commanderIds)
+  const resolveUntilDecision = () => {
+    if (untilDecision === 0) return
+    dispatch({ type: 'resolveMany', count: untilDecision })
   }
 
   return (
@@ -170,7 +211,7 @@ export default function App() {
                 deck={decks.activeDeck}
                 battlefield={game.battlefield}
                 onPush={(item) => dispatch({ type: 'push', item })}
-                onCast={cast}
+                onCast={(card, faceIndex) => cast(card, faceIndex, 'hand')}
                 onShowCard={setDetail}
                 onFieldAdd={(card, faceIndex) =>
                   dispatch({ type: 'battlefieldAdd', card, faceIndex })
@@ -196,6 +237,9 @@ export default function App() {
                     game={game}
                     dispatch={dispatch}
                     onResolveTop={resolveTop}
+                    onCascadeHit={cascadeHit}
+                    untilDecision={untilDecision}
+                    onResolveUntilDecision={resolveUntilDecision}
                     onShowCard={setDetail}
                   />
                 )}
@@ -210,11 +254,33 @@ export default function App() {
           title={sheet.title}
           subtitle={sheet.subtitle}
           suggestions={sheet.suggestions}
+          castFrom={sheet.cast?.castFrom}
+          onCastFromChange={
+            sheet.cast
+              ? (castFrom) => {
+                  const c = sheet.cast!
+                  openCastSheet(c.spellId, c.card, c.faceIndex, castFrom, game.battlefield)
+                }
+              : undefined
+          }
           onConfirm={(chosen) => {
-            dispatch({ type: 'pushMany', items: itemsFor(chosen, sheet.spellId) })
+            dispatch({ type: 'pushMany', items: itemsFor(chosen, sheet.cast?.spellId) })
             setSheet(null)
           }}
           onSkip={() => setSheet(null)}
+        />
+      )}
+
+      {pickingHit && decks.activeDeck && (
+        <DeckPicker
+          title="Cascade hit"
+          subtitle="Pick the nonland card you exiled. It is cast from exile, so Zhulodok's cascade does not apply to it."
+          deck={decks.activeDeck}
+          onPick={(card) => {
+            setPickingHit(false)
+            cast(card, 0, 'elsewhere')
+          }}
+          onCancel={() => setPickingHit(false)}
         />
       )}
 

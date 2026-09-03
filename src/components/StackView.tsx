@@ -8,6 +8,11 @@ interface Props {
   dispatch: (action: GameAction) => void
   /** Resolves the top item; the parent may follow up with enters-trigger suggestions. */
   onResolveTop: () => void
+  /** Resolves the top cascade trigger and opens the deck picker for its hit. */
+  onCascadeHit: () => void
+  /** How many items would resolve with no decision, and the action to do it. */
+  untilDecision: number
+  onResolveUntilDecision: () => void
   onShowCard: (card: Card) => void
 }
 
@@ -16,7 +21,15 @@ interface Props {
  * screen. Only the top item can be resolved; anything can be removed (countered,
  * fizzled) or reordered while the user is arranging simultaneous triggers.
  */
-export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
+export function StackView({
+  game,
+  dispatch,
+  onResolveTop,
+  onCascadeHit,
+  untilDecision,
+  onResolveUntilDecision,
+  onShowCard,
+}: Props) {
   const items = [...game.stack].reverse()
   if (items.length === 0) {
     return (
@@ -32,6 +45,20 @@ export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
   return (
     <>
       <StackSummary stack={game.stack} />
+      {untilDecision >= 2 && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <button
+            onClick={onResolveUntilDecision}
+            title="Resolve items from the top until one needs a choice"
+          >
+            ⏬ Resolve {untilDecision} until the next choice
+          </button>
+          <span className="faint" style={{ fontSize: 13 }}>
+            Stops at a payment, a sacrifice, a cascade hit, an opponent’s item, or a permanent with
+            enters triggers.
+          </span>
+        </div>
+      )}
       <div className="stack-list">
         {items.map((item, index) => (
           <StackRow
@@ -50,6 +77,7 @@ export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
             siblings={index === 0 ? siblingsOf(game.stack, item).length : 0}
             dispatch={dispatch}
             onResolveTop={onResolveTop}
+            onCascadeHit={onCascadeHit}
             onShowCard={onShowCard}
           />
         ))}
@@ -71,6 +99,7 @@ interface RowProps {
   siblings: number
   dispatch: (action: GameAction) => void
   onResolveTop: () => void
+  onCascadeHit: () => void
   onShowCard: (card: Card) => void
 }
 
@@ -84,6 +113,7 @@ function StackRow({
   siblings,
   dispatch,
   onResolveTop,
+  onCascadeHit,
   onShowCard,
 }: RowProps) {
   const [expanded, setExpanded] = useState(false)
@@ -117,6 +147,11 @@ function StackRow({
             {refersToTitle
               ? `On resolve: copies ${refersToTitle}`
               : 'On resolve: nothing, the spell has left the stack'}
+          </div>
+        )}
+        {isTop && item.onResolve === 'cascade' && (
+          <div className="effect kind-triggered">
+            Exile until a nonland card with lesser mana value. Cast it for free, or not.
           </div>
         )}
         {isTop && sacrificesSource(item) && (
@@ -161,6 +196,19 @@ function StackRow({
             </button>
             <button onClick={onResolveTop} title="Resolve without paying; nothing is copied">
               Don’t pay
+            </button>
+          </>
+        ) : isTop && item.onResolve === 'cascade' ? (
+          <>
+            <button
+              className="primary"
+              onClick={onCascadeHit}
+              title="Resolve and cast the exiled card"
+            >
+              Cast the hit
+            </button>
+            <button onClick={onResolveTop} title="Resolve without casting anything">
+              No cast
             </button>
           </>
         ) : isTop && sacrificesSource(item) ? (

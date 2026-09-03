@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import type { Suggestion } from '../lib/triggers'
+import type { CastFrom, Suggestion } from '../lib/triggers'
 
 interface Props {
   title: string
   subtitle: string
   suggestions: Suggestion[]
+  /** For cast sheets: where the spell was cast from, when a row depends on it. */
+  castFrom?: CastFrom
+  onCastFromChange?: (castFrom: CastFrom) => void
   onConfirm: (chosen: Suggestion[]) => void
   onSkip: () => void
 }
@@ -14,9 +17,31 @@ interface Props {
  * pre-ticked; uncertain matches carry a hint so the user can untick them. The list is in
  * stack order, bottom first, so the last row will be on top of the stack.
  */
-export function TriggerSheet({ title, subtitle, suggestions, onConfirm, onSkip }: Props) {
-  const [ticked, setTicked] = useState<boolean[]>(() => suggestions.map(() => true))
+export function TriggerSheet({
+  title,
+  subtitle,
+  suggestions,
+  castFrom,
+  onCastFromChange,
+  onConfirm,
+  onSkip,
+}: Props) {
+  // Rows are ticked unless the user unticked them. Keyed by ability id and position so a
+  // recomputed suggestion list (after the cast-from toggle) starts fresh where it changed.
+  const [unticked, setUnticked] = useState<Set<string>>(() => new Set())
+  const keyOf = (s: Suggestion, index: number) => `${s.ability.id}#${index}`
+  const ticked = suggestions.map((s, index) => !unticked.has(keyOf(s, index)))
+  const toggle = (index: number) => {
+    const key = keyOf(suggestions[index], index)
+    setUnticked((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
   const count = suggestions.reduce((n, s, i) => n + (ticked[i] ? s.times : 0), 0)
+  const showCastFrom = onCastFromChange && suggestions.some((s) => s.dependsOnCastFrom)
 
   return (
     <div className="modal-backdrop" onClick={onSkip} role="presentation">
@@ -33,12 +58,30 @@ export function TriggerSheet({ title, subtitle, suggestions, onConfirm, onSkip }
             <p className="muted">{subtitle}</p>
           </div>
 
+          {showCastFrom && (
+            <div className="cast-from">
+              <span className="muted">Cast from</span>
+              <button
+                className={castFrom === 'hand' ? 'on' : ''}
+                onClick={() => onCastFromChange('hand')}
+              >
+                Hand
+              </button>
+              <button
+                className={castFrom === 'elsewhere' ? 'on' : ''}
+                onClick={() => onCastFromChange('elsewhere')}
+              >
+                Elsewhere (cascade, exile, library)
+              </button>
+            </div>
+          )}
+
           <div className="stackable" style={{ gap: 8 }}>
             {suggestions.map((s, index) => (
               <button
                 key={`${s.ability.id}-${index}`}
                 className={`suggestion ${ticked[index] ? 'on' : ''}`}
-                onClick={() => setTicked(ticked.map((t, i) => (i === index ? !t : t)))}
+                onClick={() => toggle(index)}
                 aria-pressed={ticked[index]}
               >
                 <span className={`check ${ticked[index] ? 'on' : ''}`}>

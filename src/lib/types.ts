@@ -91,9 +91,10 @@ export interface StackItem {
   /**
    * What the app does when this item resolves. 'copySpell' copies the spell in
    * `refersTo` (Echoes of Eternity's "whenever you cast a colorless spell, copy it").
-   * Copies of the item inherit this, so a copied Echoes trigger copies the spell again.
+   * 'cascade' offers to cast the exiled card. Copies of the item inherit this, so a
+   * copied Echoes trigger copies the spell again and a copied cascade gets its own hit.
    */
-  onResolve?: 'copySpell'
+  onResolve?: 'copySpell' | 'cascade'
   /** Stack item id this item refers to, e.g. the spell whose cast triggered it. */
   refersTo?: string
   /** Free-form annotation the user typed, e.g. targets. */

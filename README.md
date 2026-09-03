@@ -29,6 +29,13 @@ It makes the stack visible to you and to the table, and keeps the order honest.
   Copies of that trigger, such as those Ulalek makes, copy the spell again.
 - When a copy-all trigger such as Ulalek's is on top, the item shows "Pay, copy all" and "Don't pay" so the choice is explicit.
 - A grouped summary above the stack counts what is there, so a 50-item Ulalek stack can be read to the table.
+  The log has the same summary for everything that resolved, plus how many tokens were made.
+- A cascade trigger on top offers "Cast the hit".
+  Pick the exiled card from the whole deck and it is cast from exile, with its own trigger sheet.
+- "Resolve N until the next choice" clears quiet items from the top and stops at a payment, a sacrifice, a cascade, an opponent's item, or a permanent with enters triggers.
+  It only appears when at least two items would resolve, and it is always optional.
+- Cast sheets know where the spell was cast from.
+  The Cast button means from hand; cascade hits are from exile; a toggle on the sheet covers Mystic Forge and the like.
 - Every sheet is a suggestion you confirm.
   Mana value conditions are evaluated from Scryfall data, so Sanctum of Ugin only appears for a spell with mana value 7 or more.
   Conditions the app cannot evaluate, such as "from your hand" or Guardian Project's name check, are offered with a "Check:" tag quoting the clause.

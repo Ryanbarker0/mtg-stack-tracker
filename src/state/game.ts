@@ -1,4 +1,4 @@
-import { isPermanentSpell, sacrificesItself } from '../lib/triggers'
+import { entersTriggers, isPermanentSpell, sacrificesItself } from '../lib/triggers'
 import type { BattlefieldPermanent, Card, GameState, StackItem } from '../lib/types'
 
 /**
@@ -22,6 +22,7 @@ export type GameAction =
   | { type: 'push'; item: NewItem }
   | { type: 'pushMany'; items: NewItem[] }
   | { type: 'resolveTop' }
+  | { type: 'resolveMany'; count: number }
   | { type: 'remove'; id: string }
   | { type: 'move'; id: string; direction: 'up' | 'down' }
   | { type: 'copy'; id: string }
@@ -49,6 +50,30 @@ function makeItem(item: NewItem): StackItem {
 /** True for a trigger that copies everything else when it resolves (Ulalek). */
 export function copiesAllOthers(item: StackItem): boolean {
   return /copy all spells you control/i.test(item.text)
+}
+
+/**
+ * How many items from the top can resolve with no decision from the player. Stops before
+ * an item that needs a choice (a copy-all trigger, a self-sacrifice trigger, a cascade),
+ * an opponent's item, or a permanent whose entering would trigger something. A permanent
+ * that enters quietly is included and moves to the battlefield as normal.
+ */
+export function resolvableWithoutDecision(state: GameState, commanderIds: Set<string>): number {
+  let current = state
+  let count = 0
+  while (current.stack.length > 0) {
+    const top = current.stack[current.stack.length - 1]
+    if (top.controller !== YOU) break
+    if (copiesAllOthers(top) || sacrificesSource(top) || top.onResolve === 'cascade') break
+    const entering = permanentFromResolved(top)
+    if (entering) {
+      const suggestions = entersTriggers(entering, [...current.battlefield, entering], commanderIds)
+      if (suggestions.length > 0) break
+    }
+    current = gameReducer(current, { type: 'resolveTop' })
+    count += 1
+  }
+  return count
 }
 
 /** True for a trigger that may sacrifice its own source as it resolves (Sanctum of Ugin). */
@@ -106,6 +131,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         history: [...state.history, { item: top, outcome: 'resolved', at: Date.now() }],
         battlefield: entering ? [...state.battlefield, entering] : state.battlefield,
       }
+    }
+    case 'resolveMany': {
+      let next = state
+      for (let i = 0; i < action.count; i += 1) next = gameReducer(next, { type: 'resolveTop' })
+      return next
     }
     case 'remove': {
       const target = state.stack.find((i) => i.id === action.id)

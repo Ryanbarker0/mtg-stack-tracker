@@ -35,6 +35,8 @@ export interface Suggestion {
   uncertainReason?: string
   /** A rules note worth showing, e.g. that extra copies of a self-sacrifice trigger do nothing. */
   note?: string
+  /** True when the condition depended on where the spell was cast from. */
+  dependsOnCastFrom?: boolean
 }
 
 function escapeRegExp(text: string): string {
@@ -64,6 +66,7 @@ function withNotes(suggestion: Suggestion): Suggestion {
 interface Evaluation {
   result: boolean | undefined
   reason?: string
+  dependsOnCastFrom?: boolean
 }
 
 const COPIES_SPELL_PATTERN = /\bcopy (?:it|that spell)\b/i
@@ -99,10 +102,14 @@ const COLOR_WORDS: Record<string, string> = {
   green: 'G',
 }
 
+/** Where a spell is being cast from. Cascade hits and free casts come from exile. */
+export type CastFrom = 'hand' | 'elsewhere'
+
 interface Subject {
   card: Card
   face: CardFace
   isToken: boolean
+  castFrom?: CastFrom
 }
 
 /**
@@ -196,15 +203,33 @@ function evaluateTrailing(rest: string, subject: Subject): Evaluation {
     break
   }
 
-  const leftover = text
+  let leftover = text
     .replace(/[,.].*$/s, '')
     .replace(/^(and|,)\s*/, '')
     .trim()
+  let dependsOnCastFrom = false
+  const fromHand = /^from your hand\b/i.exec(leftover)
+  const notFromHand = /^from anywhere other than your hand\b/i.exec(leftover)
+  if (fromHand || notFromHand) {
+    dependsOnCastFrom = true
+    const wantsHand = Boolean(fromHand)
+    leftover = leftover.replace((fromHand ?? notFromHand)![0], '').trim()
+    if (subject.castFrom === undefined) {
+      result = undefined
+      reasons.push(wantsHand ? 'from your hand' : 'from anywhere other than your hand')
+    } else if ((subject.castFrom === 'hand') !== wantsHand) {
+      return { result: false }
+    }
+  }
   if (leftover !== '') {
     result = undefined
     reasons.push(leftover)
   }
-  return { result, reason: reasons.length > 0 ? reasons.join('; ') : undefined }
+  return {
+    result,
+    reason: reasons.length > 0 ? reasons.join('; ') : undefined,
+    dependsOnCastFrom,
+  }
 }
 
 /** The intervening-if clause of a trigger, if it has one, in the card's words. */
@@ -221,7 +246,11 @@ function combine(qualifier: boolean | undefined, rest: string, subject: Subject)
   if (qualifier === undefined) {
     const reasons = ['type or colour could not be read']
     if (trailing.reason) reasons.push(trailing.reason)
-    return { result: undefined, reason: reasons.join('; ') }
+    return {
+      result: undefined,
+      reason: reasons.join('; '),
+      dependsOnCastFrom: trailing.dependsOnCastFrom,
+    }
   }
   return trailing
 }
@@ -256,9 +285,10 @@ export function castTriggers(
   spellFaceIndex: number,
   battlefield: BattlefieldPermanent[],
   commanderIds: Set<string>,
+  castFrom: CastFrom = 'hand',
 ): Suggestion[] {
   const face = spell.faces[spellFaceIndex] ?? spell.faces[0]
-  const subject: Subject = { card: spell, face, isToken: false }
+  const subject: Subject = { card: spell, face, isToken: false, castFrom }
   const suggestions: Suggestion[] = []
 
   for (const ability of triggeredAbilities(spell, spellFaceIndex)) {
@@ -308,6 +338,7 @@ export function castTriggers(
         },
         certain: evaluation.result,
         uncertainReason: evaluation.reason,
+        dependsOnCastFrom: evaluation.dependsOnCastFrom,
         times: cascades * doubling.times,
         doubledBy: [permanent.card.name, doubling.doubledBy].filter(Boolean).join(' + '),
         fromCommander: false,
@@ -328,6 +359,7 @@ export function castTriggers(
         ability,
         certain: evaluation.result,
         uncertainReason: evaluation.reason,
+        dependsOnCastFrom: evaluation.dependsOnCastFrom,
         ...doublersFor(permanent.card, battlefield),
         fromCommander: commanderIds.has(permanent.card.oracleId),
         copiesSpell: COPIES_SPELL_PATTERN.test(ability.text),
@@ -400,6 +432,11 @@ function orderForStack(suggestions: Suggestion[]): Suggestion[] {
   return [...suggestions]
     .map(withNotes)
     .sort((a, b) => Number(a.fromCommander) - Number(b.fromCommander))
+}
+
+/** True for a cascade trigger, whose resolution may cast the exiled card. */
+export function isCascade(text: string): boolean {
+  return /^cascade\b/i.test(text)
 }
 
 /** Whether a resolving spell becomes a permanent (CR 608.3). */
