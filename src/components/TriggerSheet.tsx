@@ -54,7 +54,9 @@ export function TriggerSheet({ title, subtitle, suggestions, onConfirm, onSkip }
                     )}
                     {s.fromCommander && <span className="tag commander">Top of stack</span>}
                     {s.certain === undefined && (
-                      <span className="tag uncertain">Check condition</span>
+                      <span className="tag uncertain" title={s.uncertainReason}>
+                        Check: {s.uncertainReason ?? 'condition'}
+                      </span>
                     )}
                   </span>
                   <span className="text">{s.ability.text}</span>

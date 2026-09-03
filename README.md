@@ -30,7 +30,8 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - When a copy-all trigger such as Ulalek's is on top, the item shows "Pay, copy all" and "Don't pay" so the choice is explicit.
 - A grouped summary above the stack counts what is there, so a 50-item Ulalek stack can be read to the table.
 - Every sheet is a suggestion you confirm.
-  Conditions the app cannot evaluate, such as Guardian Project's name check, are offered with a "Check condition" tag.
+  Mana value conditions are evaluated from Scryfall data, so Sanctum of Ugin only appears for a spell with mana value 7 or more.
+  Conditions the app cannot evaluate, such as "from your hand" or Guardian Project's name check, are offered with a "Check:" tag quoting the clause.
 - The stack is drawn top-first.
   Resolve the top item, remove anything that was countered or fizzled, reorder simultaneous triggers, copy an item, or add a note for targets.
 - "Resolve, copy all others" handles Ulalek's trigger in one tap.
@@ -83,7 +84,6 @@ The app installs as a standalone PWA and updates itself on the next launch after
 - Ability classification is text-based.
   Unusual wording may be misclassified, which is why the import review exists.
 - Trigger suggestions only understand "whenever you cast a[n] X spell", "whenever a[n] X enters" and granted cascade, evaluated against Scryfall's type line and colours.
-  Mana value conditions are not evaluated and are flagged "Check condition".
   Graveyard triggers such as Kozilek's Return are not modelled; tap them from the palette.
   Anything else on your permanents still has to be tapped by hand from the palette.
 - Decks imported before colours were stored do not know which cards are colorless.

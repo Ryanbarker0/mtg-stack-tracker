@@ -36,6 +36,7 @@ export interface ScryfallCard {
   oracle_text?: string
   keywords?: string[]
   colors?: string[]
+  cmc?: number
   image_uris?: ScryfallImageUris
   card_faces?: ScryfallFace[]
   scryfall_uri: string
@@ -115,6 +116,7 @@ export function toCard(source: ScryfallCard): Card {
     typeLine: source.type_line,
     keywords: source.keywords ?? [],
     colors: source.colors ?? unionColors(source.card_faces),
+    manaValue: source.cmc,
     faces,
     scryfallUri: source.scryfall_uri,
   }

@@ -31,6 +31,13 @@ export interface Suggestion {
   fromCommander: boolean
   /** True when the ability copies the spell that triggered it ("whenever you cast ..., copy it"). */
   copiesSpell: boolean
+  /** When `certain` is undefined, the clause the user needs to check, in the card's words. */
+  uncertainReason?: string
+}
+
+interface Evaluation {
+  result: boolean | undefined
+  reason?: string
 }
 
 const COPIES_SPELL_PATTERN = /\bcopy (?:it|that spell)\b/i
@@ -119,10 +126,78 @@ function wordMatches(word: string, typeLine: string, subject: Subject): boolean 
   return undefined
 }
 
-/** A trailing clause after the qualifier ("from your hand", "with mana value 4 or greater") is not evaluated. */
-function trailingClauseMakesUncertain(rest: string): boolean {
-  const trimmed = rest.replace(/^[,.\s]+/, '')
-  return /^(from|with|that|during|if|while|other than|each)\b/i.test(trimmed)
+/**
+ * Evaluates what follows the qualifier. Mana value clauses are checked against Scryfall's
+ * value for the card. Anything else ("from your hand", "from anywhere other than your
+ * hand") cannot be known from card data alone and is handed back as the reason for the
+ * user to check. Text after the first comma or period is the effect, not a condition.
+ */
+const MANA_VALUE_CLAUSES: Array<[RegExp, (m: RegExpExecArray, value: number) => boolean]> = [
+  [/\bwith mana value (\d+) or greater\b/i, (m, v) => v >= Number(m[1])],
+  [/\bwith mana value (\d+) or less\b/i, (m, v) => v <= Number(m[1])],
+  [
+    /\bwith mana value ((?:\d+, )+or \d+|\d+ or \d+)\b/i,
+    (m, v) =>
+      m[1]
+        .split(/,? or |, /)
+        .map(Number)
+        .includes(v),
+  ],
+  [/\bwith mana value (\d+)\b/i, (m, v) => v === Number(m[1])],
+]
+
+function evaluateTrailing(rest: string, subject: Subject): Evaluation {
+  // An intervening "if" right after the trigger condition is for the user to judge.
+  const ifClause = /^\s*,\s*(if\b[^,]+)/i.exec(rest)
+  if (ifClause) return { result: undefined, reason: ifClause[1].trim() }
+  // The effect follows straight after the qualifier: no condition to evaluate.
+  if (!/^\s+[a-z]/i.test(rest)) return { result: true }
+  let text = rest.trim()
+  let result: boolean | undefined = true
+  const reasons: string[] = []
+
+  // Mana value clauses come first because the list form ("4, 5, or 6") contains commas.
+  for (const [pattern, test] of MANA_VALUE_CLAUSES) {
+    const match = pattern.exec(text)
+    if (!match) continue
+    text = text.replace(match[0], '').trim()
+    if (subject.card.manaValue === undefined) {
+      result = undefined
+      reasons.push('mana value unknown, re-import the deck')
+    } else if (!test(match, subject.card.manaValue)) {
+      return { result: false }
+    }
+    break
+  }
+
+  const leftover = text
+    .replace(/[,.].*$/s, '')
+    .replace(/^(and|,)\s*/, '')
+    .trim()
+  if (leftover !== '') {
+    result = undefined
+    reasons.push(leftover)
+  }
+  return { result, reason: reasons.length > 0 ? reasons.join('; ') : undefined }
+}
+
+/** The intervening-if clause of a trigger, if it has one, in the card's words. */
+function interveningIf(text: string): string | undefined {
+  const match = /^[^,]*,\s*(if [^,]+),/i.exec(text)
+  return match?.[1]
+}
+
+/** Joins the qualifier result with whatever follows it into one verdict. */
+function combine(qualifier: boolean | undefined, rest: string, subject: Subject): Evaluation {
+  if (qualifier === false) return { result: false }
+  const trailing = evaluateTrailing(rest, subject)
+  if (trailing.result === false) return { result: false }
+  if (qualifier === undefined) {
+    const reasons = ['type or colour could not be read']
+    if (trailing.reason) reasons.push(trailing.reason)
+    return { result: undefined, reason: reasons.join('; ') }
+  }
+  return trailing
 }
 
 /** Doublers on the battlefield, e.g. Echoes of Eternity. */
@@ -168,6 +243,9 @@ export function castTriggers(
       ability,
       // "When you cast this spell, if ..." has an intervening-if the app cannot check.
       certain: OWN_CAST_CONDITION.test(ability.text) ? undefined : true,
+      uncertainReason: OWN_CAST_CONDITION.test(ability.text)
+        ? interveningIf(ability.text)
+        : undefined,
       ...doublersFor(spell, battlefield),
       fromCommander: false,
       copiesSpell: false,
@@ -182,9 +260,12 @@ export function castTriggers(
       const main = line.replace(/\s*\([^)]*\)/g, '')
       const match = GRANTED_CASCADE_PATTERN.exec(main)
       if (!match) continue
-      let certain = qualifierMatches(match[1].trim() || 'spell', subject)
-      if (certain === false) continue
-      if (certain && trailingClauseMakesUncertain(match[2])) certain = undefined
+      const evaluation = combine(
+        qualifierMatches(match[1].trim() || 'spell', subject),
+        match[2],
+        subject,
+      )
+      if (evaluation.result === false) continue
       const cascades = (match[3].match(/cascade/gi) ?? []).length
       const reminder = /\(([^)]*)\)/.exec(line)?.[1] ?? ''
       const doubling = doublersFor(spell, battlefield)
@@ -199,7 +280,8 @@ export function castTriggers(
           text: `Cascade (granted by ${permanent.card.name}). ${reminder}`.trim(),
           fromKeyword: true,
         },
-        certain,
+        certain: evaluation.result,
+        uncertainReason: evaluation.reason,
         times: cascades * doubling.times,
         doubledBy: [permanent.card.name, doubling.doubledBy].filter(Boolean).join(' + '),
         fromCommander: false,
@@ -212,14 +294,14 @@ export function castTriggers(
     for (const ability of triggeredAbilities(permanent.card, permanent.faceIndex)) {
       const match = CAST_PATTERN.exec(ability.text.replace(/\s*\([^)]*\)/g, ''))
       if (!match) continue
-      let certain = qualifierMatches(match[1], subject)
-      if (certain === false) continue
-      if (certain && trailingClauseMakesUncertain(match[2])) certain = undefined
+      const evaluation = combine(qualifierMatches(match[1], subject), match[2], subject)
+      if (evaluation.result === false) continue
       suggestions.push({
         source: permanent.card,
         sourceFaceIndex: permanent.faceIndex,
         ability,
-        certain,
+        certain: evaluation.result,
+        uncertainReason: evaluation.reason,
         ...doublersFor(permanent.card, battlefield),
         fromCommander: commanderIds.has(permanent.card.oracleId),
         copiesSpell: COPIES_SPELL_PATTERN.test(ability.text),
@@ -246,11 +328,13 @@ export function entersTriggers(
 
   for (const ability of triggeredAbilities(permanent.card, permanent.faceIndex)) {
     if (!OWN_ENTERS_PATTERN.test(ability.text)) continue
+    const condition = interveningIf(ability.text)
     suggestions.push({
       source: permanent.card,
       sourceFaceIndex: permanent.faceIndex,
       ability,
-      certain: true,
+      certain: condition ? undefined : true,
+      uncertainReason: condition,
       ...doublersFor(permanent.card, battlefield),
       fromCommander: commanderIds.has(permanent.card.oracleId),
       copiesSpell: false,
@@ -263,14 +347,14 @@ export function entersTriggers(
       if (!match) continue
       // "another" excludes the entering permanent itself.
       if (/\bwhenever another\b/i.test(ability.text) && watcher.id === permanent.id) continue
-      let certain = qualifierMatches(match[1], subject)
-      if (certain === false) continue
-      if (certain && trailingClauseMakesUncertain(match[2])) certain = undefined
+      const evaluation = combine(qualifierMatches(match[1], subject), match[2], subject)
+      if (evaluation.result === false) continue
       suggestions.push({
         source: watcher.card,
         sourceFaceIndex: watcher.faceIndex,
         ability,
-        certain,
+        certain: evaluation.result,
+        uncertainReason: evaluation.reason,
         ...doublersFor(watcher.card, battlefield),
         fromCommander: commanderIds.has(watcher.card.oracleId),
         copiesSpell: false,

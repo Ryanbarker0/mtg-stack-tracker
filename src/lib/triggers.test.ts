@@ -3,13 +3,20 @@ import { castTriggers, entersTriggers, isPermanentSpell, qualifierMatches } from
 import type { BattlefieldPermanent, Card } from './types'
 
 /** Real oracle text from Scryfall, fetched 2026-09-03. */
-const card = (name: string, typeLine: string, oracleText: string, colors: string[] = []): Card => ({
+const card = (
+  name: string,
+  typeLine: string,
+  oracleText: string,
+  colors: string[] = [],
+  manaValue = 10,
+): Card => ({
   scryfallId: name,
   oracleId: name,
   name,
   typeLine,
   keywords: [],
   colors,
+  manaValue,
   faces: [{ name, manaCost: '', typeLine, oracleText }],
   scryfallUri: `https://scryfall.com/card/x/1/${name}`,
 })
@@ -130,6 +137,7 @@ describe('granted abilities', () => {
     expect(cascade).toMatchObject({
       source: kozilek,
       certain: undefined,
+      uncertainReason: 'from your hand',
       times: 4,
       doubledBy: 'Zhulodok, Void Gorger + Echoes of Eternity',
     })
@@ -146,7 +154,60 @@ describe('granted abilities', () => {
       'When you cast this spell, if you have fewer than seven cards in hand, draw cards equal to the difference.\nMenace\nDiscard a card with mana value X: Counter target spell with mana value X.',
     )
     const result = castTriggers(distortion, 0, [], new Set())
-    expect(result.map((s) => s.certain)).toEqual([undefined])
+    expect(result.map((s) => [s.certain, s.uncertainReason])).toEqual([
+      [undefined, 'if you have fewer than seven cards in hand'],
+    ])
+  })
+})
+
+describe('mana value conditions', () => {
+  const sanctum = card(
+    'Sanctum of Ugin',
+    'Land',
+    '{T}: Add {C}.\nWhenever you cast a colorless spell with mana value 7 or greater, you may sacrifice this land. If you do, search your library for a colorless creature card, reveal it, put it into your hand, then shuffle.',
+  )
+  const unsealing = card(
+    "Kozilek's Unsealing",
+    'Enchantment',
+    'Devoid (This card has no color.)\nWhenever you cast a creature spell with mana value 4, 5, or 6, create two 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."\nWhenever you cast a creature spell with mana value 7 or greater, draw three cards.',
+  )
+  const seer = card(
+    'Thought-Knot Seer',
+    'Creature — Eldrazi',
+    'Devoid (This card has no color.)',
+    [],
+    4,
+  )
+
+  it("evaluates 'or greater' and lists against the spell's mana value", () => {
+    const fromField = (list: ReturnType<typeof castTriggers>) =>
+      list.filter((s) => s.source !== kozilek && s.source !== seer)
+    const big = fromField(
+      castTriggers(kozilek, 0, [onField(sanctum), onField(unsealing)], new Set()),
+    )
+    expect(big.map((s) => [s.source.name, s.certain, /7 or greater/.test(s.ability.text)])).toEqual(
+      [
+        ['Sanctum of Ugin', true, true],
+        ["Kozilek's Unsealing", true, true],
+      ],
+    )
+
+    const small = fromField(
+      castTriggers(seer, 0, [onField(sanctum), onField(unsealing)], new Set()),
+    )
+    expect(small.map((s) => [s.source.name, s.certain, /4, 5, or 6/.test(s.ability.text)])).toEqual(
+      [["Kozilek's Unsealing", true, true]],
+    )
+  })
+
+  it('asks the user when the mana value was never stored', () => {
+    const old = { ...kozilek, manaValue: undefined }
+    const result = castTriggers(old, 0, [onField(sanctum)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(result.map((s) => [s.certain, s.uncertainReason])).toEqual([
+      [undefined, 'mana value unknown, re-import the deck'],
+    ])
   })
 })
 
@@ -158,7 +219,13 @@ describe('entersTriggers', () => {
       [onField(ulalek), onField(guardian), entering],
       commanderIds,
     )
-    expect(result.map((s) => [s.source.name, s.certain])).toEqual([['Guardian Project', undefined]])
+    expect(result.map((s) => [s.source.name, s.certain, s.uncertainReason])).toEqual([
+      [
+        'Guardian Project',
+        undefined,
+        "if it doesn't have the same name as another creature you control or a creature card in your graveyard",
+      ],
+    ])
   })
 
   it('does not offer Guardian Project for a token', () => {

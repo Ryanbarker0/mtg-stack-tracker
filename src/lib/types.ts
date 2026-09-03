@@ -27,6 +27,8 @@ export interface Card {
   keywords: string[]
   /** Scryfall colour codes (W U B R G). Empty for colorless. Missing on decks imported before colours were stored. */
   colors?: string[]
+  /** Mana value (Scryfall cmc). Missing on decks imported before it was stored. */
+  manaValue?: number
   faces: CardFace[]
   scryfallUri: string
   /** Rulings text pulled from Scryfall, fetched lazily. */
