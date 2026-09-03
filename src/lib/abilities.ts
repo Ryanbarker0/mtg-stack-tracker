@@ -176,8 +176,41 @@ export function extractAbilities(card: Card): Ability[] {
 }
 
 /** True if any ability on the card would use the stack (triggered or activated, not mana). */
-export function usesStack(card: Card): boolean {
+export function hasStackAbility(card: Card): boolean {
   return extractAbilities(card).some((a) => a.kind === 'triggered' || a.kind === 'activated')
+}
+
+/** True if any face is an instant or sorcery: a spell that only ever exists on the stack. */
+export function isInstantOrSorcery(card: Card): boolean {
+  return card.faces.some((f) => /\b(Instant|Sorcery)\b/.test(f.typeLine))
+}
+
+/**
+ * Whether a card belongs in the game palette by default.
+ *
+ * Every nonland card uses the stack when cast (CR 601), so in principle the whole deck
+ * qualifies. The palette exists to cut the deck down to what matters mid-turn, so the
+ * default picks cards that either have an ability that uses the stack, or are instants
+ * and sorceries, which exist nowhere but the stack and are exactly what a copy effect
+ * like Ulalek's wants. Ability-less permanents such as mana rocks are left out; the user
+ * can tick them at import or add them mid-game with quick add.
+ */
+export function includedByDefault(card: Card): boolean {
+  return hasStackAbility(card) || isInstantOrSorcery(card)
+}
+
+/** Short reason shown at import for why a card is or is not ticked. */
+export function inclusionReason(card: Card): string {
+  const abilities = extractAbilities(card)
+  const triggered = abilities.filter((a) => a.kind === 'triggered').length
+  const activated = abilities.filter((a) => a.kind === 'activated').length
+  const parts: string[] = []
+  if (isInstantOrSorcery(card))
+    parts.push(card.faces.some((f) => /\bInstant\b/.test(f.typeLine)) ? 'instant' : 'sorcery')
+  if (triggered) parts.push(`${triggered} triggered`)
+  if (activated) parts.push(`${activated} activated`)
+  if (parts.length > 0) return parts.join(', ')
+  return card.faces.every(isLand) ? 'land, does not use the stack' : 'no stack abilities'
 }
 
 export function isLand(face: CardFace): boolean {

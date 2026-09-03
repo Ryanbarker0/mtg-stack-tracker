@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { classifyLine, extractAbilities, splitOracleText, usesStack } from './abilities'
+import {
+  classifyLine,
+  extractAbilities,
+  includedByDefault,
+  inclusionReason,
+  splitOracleText,
+} from './abilities'
 import type { Card } from './types'
 
 describe('classifyLine', () => {
@@ -104,9 +110,29 @@ describe('extractAbilities and usesStack', () => {
     ])
   })
 
-  it('reports whether a card uses the stack', () => {
-    expect(usesStack(card('When this creature enters, draw a card.'))).toBe(true)
-    expect(usesStack(card('{T}: Add {C}.', 'Land'))).toBe(false)
-    expect(usesStack(card('Flying'))).toBe(false)
+  it('includes cards with stack abilities and instants or sorceries by default', () => {
+    expect(includedByDefault(card('When this creature enters, draw a card.'))).toBe(true)
+    expect(includedByDefault(card('{T}: Add {C}.', 'Land'))).toBe(false)
+    expect(includedByDefault(card('Flying'))).toBe(false)
+    expect(includedByDefault(card('{T}: Add {C}{C}.', 'Artifact'))).toBe(false)
+    const command = card(
+      'Choose two —\n• Target player creates X 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."\n• Target player scries X, then draws a card.',
+      'Kindred Instant — Eldrazi',
+    )
+    expect(includedByDefault(command)).toBe(true)
+    expect(inclusionReason(command)).toBe('instant')
+    expect(includedByDefault(card('Destroy target creature.', 'Sorcery'))).toBe(true)
+    expect(inclusionReason(card('{T}: Add {C}.', 'Land'))).toBe('land, does not use the stack')
+    expect(inclusionReason(card('Flying'))).toBe('no stack abilities')
+  })
+
+  it('does not misread a modal instant as an activated ability', () => {
+    const abilities = extractAbilities(
+      card(
+        'Choose two —\n• Target player creates X 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."\n• Exile target creature with mana value X or less.',
+        'Kindred Instant — Eldrazi',
+      ),
+    )
+    expect(abilities.map((a) => a.kind)).toEqual(['static'])
   })
 })

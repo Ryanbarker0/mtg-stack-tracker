@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { extractAbilities, usesStack } from '../lib/abilities'
+import { includedByDefault, inclusionReason } from '../lib/abilities'
 import { parseDecklist } from '../lib/decklist'
 import { lookupDecklist } from '../lib/scryfall'
 import type { Card, Deck, DeckEntry, DecklistLine } from '../lib/types'
@@ -192,7 +192,7 @@ function mergeEntries(found: Array<{ line: DecklistLine; card: Card }>): DeckEnt
       byId.set(card.scryfallId, {
         card,
         quantity: line.quantity,
-        included: usesStack(card),
+        included: includedByDefault(card),
         isCommander: line.isCommander,
       })
     }
@@ -222,12 +222,6 @@ function ReviewRow({
   onToggle: () => void
   onShowCard: () => void
 }) {
-  const abilities = extractAbilities(entry.card)
-  const triggered = abilities.filter((a) => a.kind === 'triggered').length
-  const activated = abilities.filter((a) => a.kind === 'activated').length
-  const parts: string[] = []
-  if (triggered) parts.push(`${triggered} triggered`)
-  if (activated) parts.push(`${activated} activated`)
   return (
     <div className="review-row">
       <button
@@ -245,8 +239,7 @@ function ReviewRow({
           {entry.isCommander && <span className="tag commander">Commander</span>}
         </div>
         <div className="summary">
-          {entry.card.typeLine}
-          {parts.length > 0 ? ` · ${parts.join(', ')}` : ' · no stack abilities'}
+          {entry.card.typeLine} · {inclusionReason(entry.card)}
         </div>
       </div>
       {entry.card.faces[0].imageUrl && (
