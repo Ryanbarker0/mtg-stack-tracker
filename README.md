@@ -47,8 +47,8 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - Quick add anything not in your deck.
   Type "Kyle: Counterspell" to look up an opponent's card, or add plain text as a note.
 - Tap a card for its full image, classified abilities and Scryfall rulings.
-- Tap ⓘ on any stack item for a plain-words explanation: what it is, the steps that put it there, the rule behind it, and any deck notes about the cards involved.
-- Deck notes are short interaction reminders kept with the deck and editable in the app.
+- Tap ⓘ on any stack item for a plain-words explanation of that item: what it is, the steps that put it there, the rule behind it, and what resolving does.
+- Deck notes are short interaction reminders kept with the deck, editable in the Notes panel.
   A list shipped in `public/decks/` can bring its own notes file.
 - Undo and redo every action.
 - Everything is stored on the device and card images are cached, so a game works without network once a deck is imported.

@@ -1,5 +1,4 @@
-import { normaliseText } from './text'
-import type { DeckNote, StackItem } from './types'
+import type { StackItem } from './types'
 
 /**
  * Plain-language explanations of a stack item: what it is, why it exists, and what will
@@ -126,12 +125,4 @@ export function explain(item: StackItem, stack: StackItem[]): Insight {
   }
 
   return { what, why, onResolve }
-}
-
-/** Deck notes that mention any card involved in the item: its own card or anything in its lineage. */
-export function notesFor(item: StackItem, notes: DeckNote[]): DeckNote[] {
-  const haystack = normaliseText(
-    [item.title, item.card?.name ?? '', ...(item.origin ?? [])].join(' | '),
-  )
-  return notes.filter((note) => note.cards.some((card) => haystack.includes(normaliseText(card))))
 }

@@ -1,20 +1,18 @@
-import { explain, notesFor } from '../lib/insights'
-import type { DeckNote, StackItem } from '../lib/types'
+import { explain } from '../lib/insights'
+import type { StackItem } from '../lib/types'
 
 interface Props {
   item: StackItem
   stack: StackItem[]
-  notes: DeckNote[]
   onClose: () => void
 }
 
 /**
  * Explains one stack item in plain words: what it is, the steps that put it there, the
- * rules behind it, and any deck notes about the cards involved.
+ * rules behind it, and what resolving it does. Nothing about the wider deck lives here.
  */
-export function InsightPanel({ item, stack, notes, onClose }: Props) {
+export function InsightPanel({ item, stack, onClose }: Props) {
   const insight = explain(item, stack)
-  const related = notesFor(item, notes)
 
   return (
     <div className="modal-backdrop" onClick={onClose} role="presentation">
@@ -64,22 +62,6 @@ export function InsightPanel({ item, stack, notes, onClose }: Props) {
             <div>
               <h3>When it resolves</h3>
               <p className="muted">{insight.onResolve}</p>
-            </div>
-          )}
-
-          {related.length > 0 && (
-            <div>
-              <h3>Deck notes</h3>
-              <div className="stackable" style={{ gap: 10 }}>
-                {related.map((note) => (
-                  <div key={note.id} className="notice">
-                    <strong>{note.title}</strong>
-                    <p className="muted" style={{ marginTop: 4 }}>
-                      {note.body}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 

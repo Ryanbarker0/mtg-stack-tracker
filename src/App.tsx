@@ -383,12 +383,7 @@ export default function App() {
       )}
 
       {insight && (
-        <InsightPanel
-          item={insight}
-          stack={game.stack}
-          notes={decks.activeDeck?.notes ?? []}
-          onClose={() => setInsight(null)}
-        />
+        <InsightPanel item={insight} stack={game.stack} onClose={() => setInsight(null)} />
       )}
 
       {detail && <CardDetail card={detail} onClose={() => setDetail(null)} />}

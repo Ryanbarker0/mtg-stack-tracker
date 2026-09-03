@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { explain, notesFor } from './insights'
-import type { DeckNote, StackItem } from './types'
+import { explain } from './insights'
+import type { StackItem } from './types'
 
 const item = (over: Partial<StackItem>): StackItem => ({
   id: over.id ?? Math.random().toString(36),
@@ -57,31 +57,5 @@ describe('explain', () => {
     const insight = explain(cascade, [cascade])
     expect(insight.why.join(' ')).toMatch(/Zhulodok, Void Gorger gives it to the spell/)
     expect(insight.why.join(' ')).toMatch(/does not get cascade itself/)
-  })
-})
-
-describe('notesFor', () => {
-  const notes: DeckNote[] = [
-    { id: '1', title: 'Ulalek', body: '...', cards: ['Ulalek, Fused Atrocity'] },
-    { id: '2', title: 'Zhulodok', body: '...', cards: ['Zhulodok, Void Gorger'] },
-    { id: '3', title: 'Sanctum', body: '...', cards: ['Sanctum of Ugin'] },
-  ]
-
-  it('matches notes by the item card and by anything in its lineage', () => {
-    const cascade = item({
-      title: 'Copy of Cascade (Ulamog, the Ceaseless Hunger)',
-      origin: [
-        'Cast of Ulamog',
-        'Granted by Zhulodok, Void Gorger',
-        'Copied by Ulalek, Fused Atrocity, round 1',
-      ],
-    })
-    expect(notesFor(cascade, notes).map((n) => n.id)).toEqual(['1', '2'])
-  })
-
-  it('ignores curly quotes when matching card names', () => {
-    const kozilek = item({ title: 'Kozilek’s Command', origin: [] })
-    const note: DeckNote = { id: 'k', title: 'K', body: '', cards: ["Kozilek's Command"] }
-    expect(notesFor(kozilek, [note])).toHaveLength(1)
   })
 })

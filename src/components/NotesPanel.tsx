@@ -37,10 +37,7 @@ export function NotesPanel({ notes, onChange }: Props) {
           + Add note
         </button>
       </div>
-      <p className="faint">
-        Short reminders of how the deck works, for you and for the table. Name the cards a note is
-        about and it appears on the ⓘ panel of any stack item from those cards.
-      </p>
+      <p className="faint">Short reminders of how the deck works, for you and for the table.</p>
 
       {editing && (
         <div className="notice stackable" style={{ gap: 8 }}>
@@ -63,7 +60,7 @@ export function NotesPanel({ notes, onChange }: Props) {
           <input
             type="text"
             name="noteCards"
-            placeholder="Cards it is about, comma separated"
+            placeholder="Cards it is about, comma separated (optional)"
             value={editing.cards.join(', ')}
             onChange={(e) =>
               setEditing({
