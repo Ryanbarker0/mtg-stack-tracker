@@ -58,6 +58,14 @@ describe('classifyLine', () => {
     expect(classifyLine('Whenever you tap a Forest for mana, add an additional {G}.')).toBe('mana')
   })
 
+  it('treats a mana ability with a "when that mana is spent" clause as triggered', () => {
+    expect(
+      classifyLine(
+        "{T}: Add one mana of any color in your commander's color identity. When that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1.",
+      ),
+    ).toBe('triggered')
+  })
+
   it('treats an "Add" effect with a target as a real activated ability', () => {
     expect(classifyLine('{T}: Add {C}. Target creature gains haste until end of turn.')).toBe(
       'activated',

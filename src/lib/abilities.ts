@@ -100,6 +100,11 @@ export function classifyLine(line: string): AbilityKind {
   const colonIndex = findCostColon(main)
   if (colonIndex >= 0) {
     const effect = main.slice(colonIndex + 1).trim()
+    // A mana ability whose text also says "when that mana is spent, ..." carries a triggered
+    // ability that does use the stack (Path of Ancestry). Show the line as triggered so it
+    // can be put on the stack; the mana part never goes there anyway.
+    if (isManaEffect(effect) && /\bwhen(ever)? that mana is spent\b/i.test(effect))
+      return 'triggered'
     return isManaEffect(effect) ? 'mana' : 'activated'
   }
 
