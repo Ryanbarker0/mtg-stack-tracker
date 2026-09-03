@@ -237,4 +237,56 @@ describe('gameReducer', () => {
       'Copy of Ulalek A',
     ])
   })
+
+  it('sacrificing the source fizzles the other copies of the trigger and removes the permanent', () => {
+    const sanctum: Card = {
+      scryfallId: 'sanctum',
+      oracleId: 'sanctum',
+      name: 'Sanctum of Ugin',
+      typeLine: 'Land',
+      keywords: [],
+      colors: [],
+      faces: [{ name: 'Sanctum of Ugin', manaCost: '', typeLine: 'Land', oracleText: '' }],
+      scryfallUri: 'https://scryfall.com/card/x/1/sanctum',
+    }
+    const text =
+      'Whenever you cast a colorless spell with mana value 7 or greater, you may sacrifice this land. If you do, search your library for a colorless creature card, reveal it, put it into your hand, then shuffle.'
+    const trigger = (): GameAction => ({
+      type: 'push',
+      item: { kind: 'triggered', controller: YOU, title: 'Sanctum of Ugin', text, card: sanctum },
+    })
+    let state = gameReducer(emptyGame(), { type: 'battlefieldAdd', card: sanctum })
+    state = [
+      push('Ulamog'),
+      push('Monument trigger', YOU, 'triggered'),
+      trigger(),
+      trigger(),
+    ].reduce(gameReducer, state)
+    state = gameReducer(state, { type: 'copy', id: state.stack[2].id })
+    // Stack now: Ulamog, Monument, Sanctum, Sanctum, Copy of Sanctum (top)
+    expect(titles(state)).toEqual([
+      'Ulamog',
+      'Monument trigger',
+      'Sanctum of Ugin',
+      'Sanctum of Ugin',
+      'Copy of Sanctum of Ugin',
+    ])
+    state = gameReducer(state, { type: 'resolveTopSacrificingSource' })
+    expect(titles(state)).toEqual(['Ulamog', 'Monument trigger'])
+    expect(state.history.map((h) => h.outcome)).toEqual(['resolved', 'fizzled', 'fizzled'])
+    expect(state.battlefield).toEqual([])
+  })
+
+  it('declining a self-sacrifice trigger just resolves it and keeps the others', () => {
+    const text =
+      'Whenever you cast a colorless spell, you may sacrifice this land. If you do, draw a card.'
+    const trigger = (): GameAction => ({
+      type: 'push',
+      item: { kind: 'triggered', controller: YOU, title: 'Sanctum of Ugin', text },
+    })
+    let state = run(trigger(), trigger())
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(state.stack).toHaveLength(1)
+    expect(state.history.map((h) => h.outcome)).toEqual(['resolved'])
+  })
 })

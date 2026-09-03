@@ -105,8 +105,8 @@ export interface StackItem {
 
 export interface ResolvedItem {
   item: StackItem
-  /** How it left the stack. */
-  outcome: 'resolved' | 'removed'
+  /** How it left the stack. 'fizzled' means it resolved but could do nothing. */
+  outcome: 'resolved' | 'removed' | 'fizzled'
   at: number
 }
 

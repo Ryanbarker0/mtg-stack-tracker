@@ -42,7 +42,7 @@ function escapeRegExp(text: string): string {
 }
 
 /** "you may sacrifice this land", "Sacrifice Sanctum of Ugin": the ability removes its own source. */
-function sacrificesItself(text: string, sourceName: string): boolean {
+export function sacrificesItself(text: string, sourceName: string): boolean {
   const shortName = sourceName.split(',')[0]
   return new RegExp(
     `\\bsacrifice (this (land|creature|artifact|enchantment|permanent)|${escapeRegExp(shortName)})\\b`,

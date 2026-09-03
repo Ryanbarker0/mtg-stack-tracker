@@ -937,3 +937,7 @@ a {
   font-size: 13px;
   color: var(--kind-triggered);
 }
+
+.history-item .outcome.fizzled {
+  color: var(--text-faint);
+}

@@ -1,4 +1,4 @@
-import { isPermanentSpell } from '../lib/triggers'
+import { isPermanentSpell, sacrificesItself } from '../lib/triggers'
 import type { BattlefieldPermanent, Card, GameState, StackItem } from '../lib/types'
 
 /**
@@ -26,6 +26,7 @@ export type GameAction =
   | { type: 'move'; id: string; direction: 'up' | 'down' }
   | { type: 'copy'; id: string }
   | { type: 'resolveTopCopyingOthers'; controller: string }
+  | { type: 'resolveTopSacrificingSource' }
   | { type: 'setNote'; id: string; note: string }
   | { type: 'battlefieldAdd'; card: Card; faceIndex?: number; isToken?: boolean }
   | { type: 'battlefieldRemove'; id: string }
@@ -48,6 +49,24 @@ function makeItem(item: NewItem): StackItem {
 /** True for a trigger that copies everything else when it resolves (Ulalek). */
 export function copiesAllOthers(item: StackItem): boolean {
   return /copy all spells you control/i.test(item.text)
+}
+
+/** True for a trigger that may sacrifice its own source as it resolves (Sanctum of Ugin). */
+export function sacrificesSource(item: StackItem): boolean {
+  return (
+    (item.kind === 'triggered' || item.originalKind === 'triggered') &&
+    sacrificesItself(item.text, item.card?.name ?? item.title.replace(/^Copy of /, ''))
+  )
+}
+
+/** Other stack items that are the same ability of the same source, including copies. */
+export function siblingsOf(stack: StackItem[], item: StackItem): StackItem[] {
+  return stack.filter(
+    (i) =>
+      i.id !== item.id &&
+      i.text === item.text &&
+      (i.card?.scryfallId ?? i.title) === (item.card?.scryfallId ?? item.title),
+  )
 }
 
 function makePermanent(card: Card, faceIndex = 0, isToken = false): BattlefieldPermanent {
@@ -132,6 +151,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         stack: [...remaining, ...ordered.map(makeCopy)],
         history: [...state.history, { item: top, outcome: 'resolved', at: Date.now() }],
+      }
+    }
+    case 'resolveTopSacrificingSource': {
+      // The top trigger resolves and its source is sacrificed. Every other instance of the
+      // same trigger, copies included, can no longer sacrifice anything and does nothing
+      // when it resolves, so they leave the stack now as fizzled. The permanent leaves the
+      // battlefield.
+      if (state.stack.length === 0) return state
+      const top = state.stack[state.stack.length - 1]
+      const remaining = state.stack.slice(0, -1)
+      const siblings = siblingsOf(remaining, top)
+      const now = Date.now()
+      const sourceIndex = state.battlefield.findIndex(
+        (p) => top.card !== undefined && p.card.scryfallId === top.card.scryfallId,
+      )
+      return {
+        stack: remaining.filter((i) => !siblings.includes(i)),
+        history: [
+          ...state.history,
+          { item: top, outcome: 'resolved', at: now },
+          ...siblings.map((item) => ({ item, outcome: 'fizzled' as const, at: now })),
+        ],
+        battlefield:
+          sourceIndex >= 0
+            ? state.battlefield.filter((_, index) => index !== sourceIndex)
+            : state.battlefield,
       }
     }
     case 'setNote':

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Card, GameState, StackItem } from '../lib/types'
-import { YOU, copiesAllOthers, type GameAction } from '../state/game'
+import { YOU, copiesAllOthers, sacrificesSource, siblingsOf, type GameAction } from '../state/game'
 import { StackSummary } from './StackSummary'
 
 interface Props {
@@ -47,6 +47,7 @@ export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
                     .length
                 : 0
             }
+            siblings={index === 0 ? siblingsOf(game.stack, item).length : 0}
             dispatch={dispatch}
             onResolveTop={onResolveTop}
             onShowCard={onShowCard}
@@ -66,6 +67,8 @@ interface RowProps {
   refersToTitle?: string
   /** For the top item, how many of the controller's other items a copy-all trigger would copy. */
   othersToCopy: number
+  /** For the top item, how many other instances of the same trigger are on the stack. */
+  siblings: number
   dispatch: (action: GameAction) => void
   onResolveTop: () => void
   onShowCard: (card: Card) => void
@@ -78,6 +81,7 @@ function StackRow({
   position,
   refersToTitle,
   othersToCopy,
+  siblings,
   dispatch,
   onResolveTop,
   onShowCard,
@@ -115,6 +119,15 @@ function StackRow({
               : 'On resolve: nothing, the spell has left the stack'}
           </div>
         )}
+        {isTop && sacrificesSource(item) && (
+          <div className="effect kind-triggered">
+            Sacrificing the source
+            {siblings > 0
+              ? ` fizzles the ${siblings} other ${siblings === 1 ? 'copy' : 'copies'} of this trigger`
+              : ''}
+            . Declining resolves it with no effect.
+          </div>
+        )}
         {isTop && copiesAllOthers(item) && (
           <div className="effect kind-copy">
             Pay {'{C}{C}'} to copy the {othersToCopy} other item{othersToCopy === 1 ? '' : 's'} you
@@ -148,6 +161,19 @@ function StackRow({
             </button>
             <button onClick={onResolveTop} title="Resolve without paying; nothing is copied">
               Don’t pay
+            </button>
+          </>
+        ) : isTop && sacrificesSource(item) ? (
+          <>
+            <button
+              className="primary"
+              onClick={() => dispatch({ type: 'resolveTopSacrificingSource' })}
+              title="Sacrifice the source and resolve; other copies of this trigger fizzle"
+            >
+              Sacrifice, resolve
+            </button>
+            <button onClick={onResolveTop} title="Resolve without sacrificing; nothing happens">
+              Decline
             </button>
           </>
         ) : isTop ? (
