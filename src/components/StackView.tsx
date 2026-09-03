@@ -38,6 +38,8 @@ export function StackView({
   onStopAuto,
   onShowCard,
 }: Props) {
+  // Items created after this view mounted slide in; the ones already there on load do not.
+  const [mountedAt] = useState(() => Date.now())
   const items = [...game.stack].reverse()
   if (items.length === 0) {
     return (
@@ -98,6 +100,7 @@ export function StackView({
             }
             siblings={index === 0 ? siblingsOf(game.stack, item).length : 0}
             leaving={item.id === leavingId}
+            mountedAt={mountedAt}
             dispatch={dispatch}
             onResolveTop={onResolveTop}
             onCascadeHit={onCascadeHit}
@@ -122,6 +125,8 @@ interface RowProps {
   siblings: number
   /** True while this item animates off the stack. */
   leaving: boolean
+  /** When the list mounted; items created later animate in. */
+  mountedAt: number
   dispatch: (action: GameAction) => void
   onResolveTop: () => void
   onCascadeHit: () => void
@@ -137,6 +142,7 @@ function StackRow({
   othersToCopy,
   siblings,
   leaving,
+  mountedAt,
   dispatch,
   onResolveTop,
   onCascadeHit,
@@ -147,7 +153,11 @@ function StackRow({
   const opponent = item.controller !== YOU
 
   return (
-    <div className={`stack-item ${isTop ? 'top' : ''} ${leaving ? 'leaving' : ''}`}>
+    <div
+      className={`stack-item ${isTop ? 'top' : ''} ${leaving ? 'leaving' : ''} ${
+        item.createdAt > mountedAt ? 'entering' : ''
+      }`}
+    >
       <span className={`bar bar-${item.kind}`} />
       {item.imageUrl ? (
         <img

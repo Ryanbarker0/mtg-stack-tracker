@@ -1103,3 +1103,56 @@ a {
     animation: none;
   }
 }
+
+/* Items arriving on the stack (copies made on resolution, triggers from a sheet) */
+
+.stack-item.entering {
+  animation: enter-in 520ms ease-out;
+}
+
+@keyframes enter-in {
+  0% {
+    transform: translateY(18px) scale(0.98);
+    opacity: 0;
+    box-shadow: 0 0 0 3px var(--kind-copy);
+  }
+  40% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 3px var(--kind-copy),
+      0 0 28px rgba(194, 155, 255, 0.5);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: none;
+  }
+}
+
+.stack-item.top.entering {
+  animation-name: enter-in-top;
+}
+
+@keyframes enter-in-top {
+  0% {
+    transform: translateY(18px) scale(0.98);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 3px var(--kind-copy),
+      0 0 28px rgba(194, 155, 255, 0.5);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow:
+      0 0 0 2px var(--accent-soft),
+      var(--shadow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack-item.entering {
+    animation: none;
+  }
+}
