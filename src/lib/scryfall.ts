@@ -1,3 +1,4 @@
+import { normaliseText } from './text'
 import type { Card, CardFace, DecklistLine } from './types'
 
 /**
@@ -213,11 +214,11 @@ export function matchCard(
   cards: Card[],
   identifier: Record<string, string>,
 ): Card | undefined {
-  const wanted = line.name.toLowerCase()
+  const wanted = normaliseText(line.name)
   const nameMatches = (c: Card) =>
-    c.name.toLowerCase() === wanted ||
-    c.faces.some((f) => f.name.toLowerCase() === wanted) ||
-    c.name.toLowerCase().startsWith(`${wanted} //`)
+    normaliseText(c.name) === wanted ||
+    c.faces.some((f) => normaliseText(f.name) === wanted) ||
+    normaliseText(c.name).startsWith(`${wanted} //`)
 
   if (identifier.set && identifier.collector_number) {
     const printing = cards.find((c) =>

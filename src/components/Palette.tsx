@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { extractAbilities, isLand } from '../lib/abilities'
 import { itemForAbility, type NewStackItem } from '../lib/stackItems'
+import { normaliseText } from '../lib/text'
 import type { Ability, BattlefieldPermanent, Card, Deck } from '../lib/types'
 
 interface Props {
@@ -36,12 +37,12 @@ export function Palette({
       if (a.isCommander !== b.isCommander) return a.isCommander ? -1 : 1
       return a.card.name.localeCompare(b.card.name)
     })
-    const needle = filter.trim().toLowerCase()
+    const needle = normaliseText(filter)
     if (needle === '') return sorted
     return sorted.filter(
       (e) =>
-        e.card.name.toLowerCase().includes(needle) ||
-        e.card.faces.some((f) => f.oracleText.toLowerCase().includes(needle)),
+        normaliseText(e.card.name).includes(needle) ||
+        e.card.faces.some((f) => normaliseText(f.oracleText).includes(needle)),
     )
   }, [deck, filter])
 

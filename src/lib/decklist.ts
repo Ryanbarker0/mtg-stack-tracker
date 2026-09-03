@@ -1,3 +1,4 @@
+import { straightenPunctuation } from './text'
 import type { DecklistLine } from './types'
 
 /**
@@ -80,7 +81,7 @@ export function parseLine(raw: string): DecklistLine | null {
   if (!match) return null
 
   const [, qty, name, set, collectorNumber] = match
-  const cleanName = name.trim()
+  const cleanName = straightenPunctuation(name).trim()
   if (cleanName === '') return null
 
   return {

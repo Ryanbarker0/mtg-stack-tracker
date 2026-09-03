@@ -6,6 +6,7 @@ import {
   parseControllerPrefix,
   type NewStackItem,
 } from '../lib/stackItems'
+import { straightenPunctuation } from '../lib/text'
 import type { Card } from '../lib/types'
 
 interface Props {
@@ -28,7 +29,7 @@ export function QuickAdd({ onPush }: Props) {
   const [error, setError] = useState<string | null>(null)
   const debounce = useRef<number | undefined>(undefined)
 
-  const { controller, text } = parseControllerPrefix(value)
+  const { controller, text } = parseControllerPrefix(straightenPunctuation(value))
 
   // Suggestions are only shown for the query they were fetched for, so a cleared input
   // never shows stale names.

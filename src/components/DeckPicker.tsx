@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { isLand } from '../lib/abilities'
+import { normaliseText } from '../lib/text'
 import type { Card, Deck } from '../lib/types'
 
 interface Props {
@@ -17,11 +18,11 @@ interface Props {
 export function DeckPicker({ title, subtitle, deck, onPick, onCancel }: Props) {
   const [filter, setFilter] = useState('')
   const cards = useMemo(() => {
-    const needle = filter.trim().toLowerCase()
+    const needle = normaliseText(filter)
     return deck.entries
       .map((e) => e.card)
       .filter((c) => c.faces.some((f) => !isLand(f)))
-      .filter((c) => needle === '' || c.name.toLowerCase().includes(needle))
+      .filter((c) => needle === '' || normaliseText(c.name).includes(needle))
       .sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name))
   }, [deck, filter])
 
