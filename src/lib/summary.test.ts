@@ -36,4 +36,11 @@ describe('groupItems', () => {
       ['Cascade on Ulamog', 'triggered', 1, 0],
     ])
   })
+
+  it('keeps the keyword title when the item is already named by it', () => {
+    const groups = groupItems([
+      item({ title: 'Cascade (Ulamog)', text: 'Cascade (granted by Zhulodok, Void Gorger). ...' }),
+    ])
+    expect(groups.map((g) => g.title)).toEqual(['Cascade (Ulamog)'])
+  })
 })

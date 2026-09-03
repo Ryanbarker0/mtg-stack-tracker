@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Card, GameState, StackItem } from '../lib/types'
 import { YOU, copiesAllOthers, sacrificesSource, siblingsOf, type GameAction } from '../state/game'
+import { shortKind } from '../lib/summary'
 import { StackSummary } from './StackSummary'
 
 interface Props {
@@ -173,7 +174,11 @@ function StackRow({
         <div className="meta">
           {isTop && <span className="top-label">▲ Resolves next</span>}
           {!isTop && <span className="faint">#{position}</span>}
-          <span className={`kind-${item.kind}`}>{item.kind}</span>
+          <span className={`kind-${item.kind}`}>
+            {item.kind === 'copy'
+              ? `copy of ${shortKind(item.originalKind ?? 'spell')}`
+              : item.kind}
+          </span>
           <span className={`controller ${opponent ? 'opponent' : ''}`}>{item.controller}</span>
         </div>
         <div className="item-title">{item.title}</div>
