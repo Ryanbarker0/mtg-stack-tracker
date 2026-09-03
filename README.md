@@ -17,6 +17,14 @@ It makes the stack visible to you and to the table, and keeps the order honest.
   If the commander's text says "whenever you cast a(n) X spell", every card of type X is ticked as well, so for Ulalek all Eldrazi spells are in the palette.
   Every nonland card uses the stack when cast, so anything left unticked can still be added mid-game with quick add.
 - In a game, tap an ability to put it on the stack, or tap Cast to put the card on as a spell.
+- The app keeps a light list of the permanents you control.
+  Your commander starts there, permanent spells you resolve move there automatically, and you can add or remove anything with the Field button.
+- When you Cast, the app reads the oracle text of your permanents and offers every "whenever you cast" trigger that matches the spell, plus the spell's own "when you cast" trigger, in one sheet.
+  Your commander's trigger is placed on top of the stack so it resolves first.
+  When a permanent resolves, the same sheet offers its "when this enters" trigger and any "whenever a creature enters" triggers you control.
+- A doubler such as Echoes of Eternity is applied as a ×2 on triggers from colorless sources.
+- Every sheet is a suggestion you confirm.
+  Conditions the app cannot evaluate, such as Guardian Project's name check, are offered with a "Check condition" tag.
 - The stack is drawn top-first.
   Resolve the top item, remove anything that was countered or fizzled, reorder simultaneous triggers, copy an item, or add a note for targets.
 - "Resolve, copy all others" handles Ulalek's trigger in one tap.
@@ -68,5 +76,9 @@ The app installs as a standalone PWA and updates itself on the next launch after
 - Archidekt blocks browser requests from other origins, so decks are imported by pasting the text export rather than by URL.
 - Ability classification is text-based.
   Unusual wording may be misclassified, which is why the import review exists.
+- Trigger suggestions only understand "whenever you cast a[n] X spell" and "whenever a[n] X enters", evaluated against Scryfall's type line and colours.
+  Anything else on your permanents still has to be tapped by hand from the palette.
+- Decks imported before colours were stored do not know which cards are colorless.
+  Re-import the deck and "colorless" conditions will evaluate.
 - Single user and single device.
   There is no sync between devices.

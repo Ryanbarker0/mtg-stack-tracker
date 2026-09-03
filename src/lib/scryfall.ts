@@ -19,6 +19,7 @@ interface ScryfallImageUris {
 
 interface ScryfallFace {
   name: string
+  colors?: string[]
   mana_cost?: string
   type_line?: string
   oracle_text?: string
@@ -34,6 +35,7 @@ export interface ScryfallCard {
   mana_cost?: string
   oracle_text?: string
   keywords?: string[]
+  colors?: string[]
   image_uris?: ScryfallImageUris
   card_faces?: ScryfallFace[]
   scryfall_uri: string
@@ -112,9 +114,16 @@ export function toCard(source: ScryfallCard): Card {
     name: source.name,
     typeLine: source.type_line,
     keywords: source.keywords ?? [],
+    colors: source.colors ?? unionColors(source.card_faces),
     faces,
     scryfallUri: source.scryfall_uri,
   }
+}
+
+/** Transform cards carry colours per face; the card's colour is the union. */
+function unionColors(faces: ScryfallFace[] | undefined): string[] | undefined {
+  if (!faces || faces.every((f) => f.colors === undefined)) return undefined
+  return [...new Set(faces.flatMap((f) => f.colors ?? []))]
 }
 
 function identifierFor(line: DecklistLine): Record<string, string> {

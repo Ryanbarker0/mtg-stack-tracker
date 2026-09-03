@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { YOU, emptyGame, gameReducer, type GameAction } from './game'
-import type { GameState, StackItem } from '../lib/types'
+import { itemForSpell } from '../lib/stackItems'
+import type { Card, GameState, StackItem } from '../lib/types'
 
 const push = (title: string, controller = YOU, kind: StackItem['kind'] = 'spell'): GameAction => ({
   type: 'push',
@@ -77,5 +78,81 @@ describe('gameReducer', () => {
   it('does nothing when resolving an empty stack', () => {
     const state = emptyGame()
     expect(gameReducer(state, { type: 'resolveTop' })).toBe(state)
+  })
+
+  it('moves a resolved permanent spell onto the battlefield, and a copy as a token', () => {
+    const kozilek: Card = {
+      scryfallId: 'k',
+      oracleId: 'k',
+      name: 'Kozilek, Butcher of Truth',
+      typeLine: 'Legendary Creature — Eldrazi',
+      keywords: [],
+      colors: [],
+      faces: [
+        {
+          name: 'Kozilek, Butcher of Truth',
+          manaCost: '{10}',
+          typeLine: 'Legendary Creature — Eldrazi',
+          oracleText: 'When you cast this spell, draw four cards.',
+        },
+      ],
+      scryfallUri: 'https://scryfall.com/card/m3c/191/kozilek',
+    }
+    let state = gameReducer(emptyGame(), { type: 'push', item: itemForSpell(kozilek) })
+    state = gameReducer(state, { type: 'copy', id: state.stack[0].id })
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(state.battlefield.map((p) => [p.card.name, p.isToken])).toEqual([
+      ['Kozilek, Butcher of Truth', true],
+    ])
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(state.battlefield.map((p) => p.isToken)).toEqual([true, false])
+  })
+
+  it('does not put instants or triggers onto the battlefield', () => {
+    const counterspell: Card = {
+      scryfallId: 'c',
+      oracleId: 'c',
+      name: 'Counterspell',
+      typeLine: 'Instant',
+      keywords: [],
+      colors: ['U'],
+      faces: [
+        {
+          name: 'Counterspell',
+          manaCost: '{U}{U}',
+          typeLine: 'Instant',
+          oracleText: 'Counter target spell.',
+        },
+      ],
+      scryfallUri: 'https://scryfall.com/card/x/1/counterspell',
+    }
+    let state = run(push('Ulalek trigger', YOU, 'triggered'))
+    state = gameReducer(state, { type: 'push', item: itemForSpell(counterspell) })
+    state = gameReducer(state, { type: 'resolveTop' })
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(state.battlefield).toEqual([])
+  })
+
+  it('starts a new game with the commanders on the battlefield', () => {
+    const ulalek: Card = {
+      scryfallId: 'u',
+      oracleId: 'u',
+      name: 'Ulalek, Fused Atrocity',
+      typeLine: 'Legendary Creature — Eldrazi',
+      keywords: [],
+      colors: [],
+      faces: [
+        {
+          name: 'Ulalek, Fused Atrocity',
+          manaCost: '',
+          typeLine: 'Legendary Creature — Eldrazi',
+          oracleText: '',
+        },
+      ],
+      scryfallUri: 'https://scryfall.com/card/m3c/4/ulalek',
+    }
+    const state = gameReducer(run(push('A')), { type: 'newGame', commanders: [ulalek] })
+    expect(state.stack).toEqual([])
+    expect(state.battlefield.map((p) => p.card.name)).toEqual(['Ulalek, Fused Atrocity'])
   })
 })

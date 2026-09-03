@@ -11,6 +11,11 @@ interface Timeline {
   future: GameState[]
 }
 
+/** Games saved before the battlefield existed lack the field. */
+function migrate(stored: GameState): GameState {
+  return { ...stored, battlefield: stored.battlefield ?? [] }
+}
+
 /**
  * Game state with undo/redo and persistence. Undo history lives in memory only; the
  * current state is written to IndexedDB after every change so a reload mid-game is safe.
@@ -27,7 +32,7 @@ export function useGame() {
     let cancelled = false
     loadGame().then((stored) => {
       if (cancelled) return
-      if (stored) setTimeline({ past: [], present: stored, future: [] })
+      if (stored) setTimeline({ past: [], present: migrate(stored), future: [] })
       setLoaded(true)
     })
     return () => {

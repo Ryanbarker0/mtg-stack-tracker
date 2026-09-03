@@ -25,6 +25,8 @@ export interface Card {
   name: string
   typeLine: string
   keywords: string[]
+  /** Scryfall colour codes (W U B R G). Empty for colorless. Missing on decks imported before colours were stored. */
+  colors?: string[]
   faces: CardFace[]
   scryfallUri: string
   /** Rulings text pulled from Scryfall, fetched lazily. */
@@ -80,6 +82,10 @@ export interface StackItem {
   scryfallUri?: string
   /** If this is a copy, the id of the item it was copied from (may be resolved already). */
   copyOf?: string
+  /** For copies, the kind of the original so a copied permanent spell still becomes a token. */
+  originalKind?: StackItemKind
+  /** Which face of the card this item represents. */
+  faceIndex?: number
   /** Free-form annotation the user typed, e.g. targets. */
   note?: string
   /** The full card, when the item came from one, so the detail view can show image and rulings. */
@@ -94,10 +100,19 @@ export interface ResolvedItem {
   at: number
 }
 
+/** A permanent you control. Used only to suggest triggers; it is not a full board state. */
+export interface BattlefieldPermanent {
+  id: string
+  card: Card
+  faceIndex: number
+  isToken: boolean
+}
+
 export interface GameState {
   /** Bottom of the stack is index 0; top (next to resolve) is the last element. */
   stack: StackItem[]
   history: ResolvedItem[]
+  battlefield: BattlefieldPermanent[]
 }
 
 /** A parsed line from a pasted decklist before it has been looked up on Scryfall. */

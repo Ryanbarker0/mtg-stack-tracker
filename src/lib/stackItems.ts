@@ -14,6 +14,7 @@ export function itemForAbility(card: Card, ability: Ability, controller = YOU): 
     imageUrl: face.imageUrl,
     scryfallUri: card.scryfallUri,
     card,
+    faceIndex: ability.faceIndex,
   }
 }
 
@@ -28,6 +29,7 @@ export function itemForSpell(card: Card, faceIndex = 0, controller = YOU): NewSt
     imageUrl: face.imageUrl,
     scryfallUri: card.scryfallUri,
     card,
+    faceIndex,
   }
 }
 

@@ -5,6 +5,8 @@ import { YOU, type GameAction } from '../state/game'
 interface Props {
   game: GameState
   dispatch: (action: GameAction) => void
+  /** Resolves the top item; the parent may follow up with enters-trigger suggestions. */
+  onResolveTop: () => void
   onShowCard: (card: Card) => void
 }
 
@@ -13,7 +15,7 @@ interface Props {
  * screen. Only the top item can be resolved; anything can be removed (countered,
  * fizzled) or reordered while the user is arranging simultaneous triggers.
  */
-export function StackView({ game, dispatch, onShowCard }: Props) {
+export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
   const items = [...game.stack].reverse()
   if (items.length === 0) {
     return (
@@ -34,6 +36,7 @@ export function StackView({ game, dispatch, onShowCard }: Props) {
           isBottom={index === items.length - 1}
           position={game.stack.length - index}
           dispatch={dispatch}
+          onResolveTop={onResolveTop}
           onShowCard={onShowCard}
         />
       ))}
@@ -47,10 +50,19 @@ interface RowProps {
   isBottom: boolean
   position: number
   dispatch: (action: GameAction) => void
+  onResolveTop: () => void
   onShowCard: (card: Card) => void
 }
 
-function StackRow({ item, isTop, isBottom, position, dispatch, onShowCard }: RowProps) {
+function StackRow({
+  item,
+  isTop,
+  isBottom,
+  position,
+  dispatch,
+  onResolveTop,
+  onShowCard,
+}: RowProps) {
   const [expanded, setExpanded] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const opponent = item.controller !== YOU
@@ -94,7 +106,7 @@ function StackRow({ item, isTop, isBottom, position, dispatch, onShowCard }: Row
       </div>
       <div className="actions">
         {isTop ? (
-          <button className="primary" onClick={() => dispatch({ type: 'resolveTop' })}>
+          <button className="primary" onClick={onResolveTop}>
             Resolve
           </button>
         ) : (
