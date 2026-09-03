@@ -1156,3 +1156,17 @@ a {
     animation: none;
   }
 }
+
+/* Lineage line under a stack item */
+
+.stack-item .origin {
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stack-item .origin.expanded {
+  white-space: normal;
+}

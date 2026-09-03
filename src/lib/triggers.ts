@@ -37,6 +37,8 @@ export interface Suggestion {
   note?: string
   /** True when the condition depended on where the spell was cast from. */
   dependsOnCastFrom?: boolean
+  /** For abilities a permanent gives the spell, the permanent's name. */
+  grantedBy?: string
 }
 
 function escapeRegExp(text: string): string {
@@ -323,7 +325,13 @@ export function castTriggers(
       )
       if (evaluation.result === false) continue
       const cascades = (match[3].match(/cascade/gi) ?? []).length
-      const reminder = /\(([^)]*)\)/.exec(line)?.[1] ?? ''
+      // Reminder text reads "When you cast one, exile cards..."; on the trigger itself the
+      // lead-in is noise, so the item text starts at the effect.
+      // "Then do it again" describes the second cascade, which is its own item here.
+      const reminder = (/\(([^)]*)\)/.exec(line)?.[1] ?? '')
+        .replace(/^when you cast one,\s*/i, '')
+        .replace(/\s*Then do it again\.?\s*$/i, '')
+      const effect = reminder.charAt(0).toUpperCase() + reminder.slice(1)
       const doubling = doublersFor(spell, battlefield)
       suggestions.push({
         source: spell,
@@ -333,14 +341,17 @@ export function castTriggers(
           cardOracleId: spell.oracleId,
           faceIndex: spellFaceIndex,
           kind: 'triggered',
-          text: `Cascade (granted by ${permanent.card.name}). ${reminder}`.trim(),
+          text: `Cascade. ${effect}`.trim(),
           fromKeyword: true,
         },
+        grantedBy: permanent.card.name,
         certain: evaluation.result,
         uncertainReason: evaluation.reason,
         dependsOnCastFrom: evaluation.dependsOnCastFrom,
         times: cascades * doubling.times,
-        doubledBy: [permanent.card.name, doubling.doubledBy].filter(Boolean).join(' + '),
+        doubledBy: [`${cascades}× from ${permanent.card.name}`, doubling.doubledBy]
+          .filter(Boolean)
+          .join(' + '),
         fromCommander: false,
         copiesSpell: false,
       })

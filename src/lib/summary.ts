@@ -16,11 +16,7 @@ export function groupItems(items: StackItem[]): ItemGroup[] {
   const groups = new Map<string, ItemGroup>()
   for (const item of items) {
     const kind = item.kind === 'copy' ? (item.originalKind ?? 'spell') : item.kind
-    const base = item.title.replace(/^Copy of /, '')
-    // Older items named a granted keyword trigger after the card; newer ones are already
-    // "Cascade (Ulamog...)". Name both by the keyword.
-    const granted = /^([A-Z][a-z]+) \(granted by /.exec(item.text)
-    const title = granted && !base.startsWith(granted[1]) ? `${granted[1]} on ${base}` : base
+    const title = item.title.replace(/^Copy of /, '')
     // Different abilities of the same card are different groups, so key on the text too.
     const key = `${kind}|${title}|${kind === 'spell' ? '' : item.text.slice(0, 40)}`
     const group = groups.get(key) ?? { key, title, kind, originals: 0, copies: 0 }

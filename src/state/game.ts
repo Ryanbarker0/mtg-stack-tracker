@@ -124,7 +124,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // "Copy it": the spell may already have resolved or been countered, in which case
         // the trigger does nothing.
         const spell = stack.find((i) => i.id === top.refersTo)
-        if (spell) stack = [...stack, makeCopy(spell)]
+        if (spell) stack = [...stack, makeCopy(spell, `Copied by ${baseTitle(top)} trigger`)]
       }
       return {
         stack,
@@ -159,7 +159,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'copy': {
       const source = state.stack.find((i) => i.id === action.id)
       if (!source) return state
-      return { ...state, stack: [...state.stack, makeCopy(source)] }
+      return { ...state, stack: [...state.stack, makeCopy(source, 'Copied by hand')] }
     }
     case 'resolveTopCopyingOthers': {
       // The top object resolves and, as it does, copies every other spell and ability its
@@ -177,9 +177,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...sources.filter((i) => !copiesAllOthers(i)),
         ...sources.filter((i) => copiesAllOthers(i)),
       ]
+      // Number the payments so a copy's lineage reads "Copied by Ulalek, round 2".
+      const round =
+        1 + state.history.filter((h) => h.outcome === 'resolved' && copiesAllOthers(h.item)).length
+      const cause = `Copied by ${baseTitle(top)}, round ${round}`
       return {
         ...state,
-        stack: [...remaining, ...ordered.map(makeCopy)],
+        stack: [...remaining, ...ordered.map((i) => makeCopy(i, cause))],
         history: [...state.history, { item: top, outcome: 'resolved', at: Date.now() }],
       }
     }
@@ -233,7 +237,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
-function makeCopy(source: StackItem): StackItem {
+function baseTitle(item: StackItem): string {
+  return item.title.replace(/^Copy of /, '')
+}
+
+function makeCopy(source: StackItem, cause: string): StackItem {
   return {
     ...source,
     id: newId(),
@@ -242,5 +250,6 @@ function makeCopy(source: StackItem): StackItem {
     originalKind: source.originalKind ?? source.kind,
     copyOf: source.copyOf ?? source.id,
     title: source.title.startsWith('Copy of ') ? source.title : `Copy of ${source.title}`,
+    origin: [...(source.origin ?? []), cause],
   }
 }

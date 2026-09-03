@@ -183,6 +183,11 @@ function StackRow({
         </div>
         <div className="item-title">{item.title}</div>
         {item.text && <div className={`item-text ${expanded ? 'expanded' : ''}`}>{item.text}</div>}
+        {item.origin && item.origin.length > 0 && (
+          <div className={`origin ${expanded ? 'expanded' : ''}`} title={item.origin.join(' → ')}>
+            ↳ {item.origin.join(' → ')}
+          </div>
+        )}
         {item.onResolve === 'copySpell' && (
           <div className="effect kind-copy">
             {refersToTitle

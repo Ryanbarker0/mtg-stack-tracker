@@ -139,11 +139,12 @@ describe('granted abilities', () => {
       certain: true,
       dependsOnCastFrom: true,
       times: 4,
-      doubledBy: 'Zhulodok, Void Gorger + Echoes of Eternity',
+      doubledBy: '2× from Zhulodok, Void Gorger + Echoes of Eternity',
     })
-    expect(cascade?.ability.text).toMatch(
-      /^Cascade \(granted by Zhulodok, Void Gorger\)\. When you cast one, exile cards/,
+    expect(cascade?.ability.text).toBe(
+      'Cascade. Exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order.',
     )
+    expect(cascade?.grantedBy).toBe('Zhulodok, Void Gorger')
     expect(castTriggers(counterspell, 0, [onField(zhulodok)], new Set())).toEqual([])
   })
 

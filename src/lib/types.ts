@@ -97,6 +97,11 @@ export interface StackItem {
   onResolve?: 'copySpell' | 'cascade'
   /** Stack item id this item refers to, e.g. the spell whose cast triggered it. */
   refersTo?: string
+  /**
+   * Where this item came from, oldest cause first, e.g.
+   * ["Cast of Ulamog", "Copied by Ulalek, round 1", "Copied by Ulalek, round 2"].
+   */
+  origin?: string[]
   /** Free-form annotation the user typed, e.g. targets. */
   note?: string
   /** The full card, when the item came from one, so the detail view can show image and rulings. */

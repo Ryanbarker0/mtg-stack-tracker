@@ -33,6 +33,8 @@ interface Sheet {
   title: string
   subtitle: string
   suggestions: Suggestion[]
+  /** Short description of the event, used as the first entry of each item's lineage. */
+  event: string
   /** For cast sheets: the spell, so suggestions can be recomputed when cast-from changes. */
   cast?: { spellId: string; card: Card; faceIndex: number; castFrom: CastFrom }
 }
@@ -80,12 +82,19 @@ export default function App() {
     setScreen('game')
   }
 
-  const itemsFor = (chosen: Suggestion[], spellId?: string): NewItem[] =>
+  const itemsFor = (chosen: Suggestion[], event: string, spellId?: string): NewItem[] =>
     chosen.flatMap((s) =>
       Array.from({ length: s.times }, () => ({
         ...itemForAbility(s.source, s.ability),
         ...(s.copiesSpell && spellId ? { onResolve: 'copySpell' as const, refersTo: spellId } : {}),
         ...(isCascade(s.ability.text) ? { onResolve: 'cascade' as const } : {}),
+        origin: [
+          event,
+          ...(s.grantedBy ? [`Granted by ${s.grantedBy}`] : []),
+          ...(s.times > 1 && s.doubledBy?.includes('Echoes')
+            ? ['Doubled by Echoes of Eternity']
+            : []),
+        ],
       })),
     )
 
@@ -103,6 +112,7 @@ export default function App() {
     }
     setSheet({
       title: `Casting ${card.faces[faceIndex]?.name ?? card.name}`,
+      event: `Cast of ${card.faces[faceIndex]?.name ?? card.name}`,
       subtitle:
         'These abilities trigger on the cast. They go on the stack above the spell in this order, so the last row ends up on top.',
       suggestions,
@@ -113,7 +123,14 @@ export default function App() {
   const cast = (card: Card, faceIndex: number, castFrom: CastFrom = 'hand') => {
     // The spell gets its id up front so its triggers can refer back to it.
     const spellId = newId()
-    dispatch({ type: 'push', item: { ...itemForSpell(card, faceIndex), id: spellId } })
+    dispatch({
+      type: 'push',
+      item: {
+        ...itemForSpell(card, faceIndex),
+        id: spellId,
+        origin: [castFrom === 'hand' ? 'Cast from hand' : 'Cast from exile (cascade or free cast)'],
+      },
+    })
     openCastSheet(spellId, card, faceIndex, castFrom, game.battlefield)
   }
 
@@ -123,6 +140,7 @@ export default function App() {
     if (suggestions.length === 0) return
     setSheet({
       title: `${entering.card.faces[entering.faceIndex]?.name ?? entering.card.name} entered`,
+      event: `${entering.card.faces[entering.faceIndex]?.name ?? entering.card.name} entering`,
       subtitle: 'These abilities trigger on it entering the battlefield.',
       suggestions,
     })
@@ -323,7 +341,10 @@ export default function App() {
               : undefined
           }
           onConfirm={(chosen) => {
-            dispatch({ type: 'pushMany', items: itemsFor(chosen, sheet.cast?.spellId) })
+            dispatch({
+              type: 'pushMany',
+              items: itemsFor(chosen, sheet.event, sheet.cast?.spellId),
+            })
             setSheet(null)
           }}
           onSkip={() => setSheet(null)}

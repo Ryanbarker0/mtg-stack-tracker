@@ -26,20 +26,20 @@ describe('groupItems', () => {
         text: 'Indestructible',
       }),
       item({
-        title: 'Ulamog',
-        text: 'Cascade (granted by Zhulodok, Void Gorger). When you cast one, exile...',
+        title: 'Cascade (Ulamog)',
+        text: 'Cascade. Exile cards from the top of your library...',
       }),
     ])
     expect(groups.map((g) => [g.title, g.kind, g.originals, g.copies])).toEqual([
       ['Forsaken Monument', 'triggered', 2, 1],
       ['Ulamog', 'spell', 1, 1],
-      ['Cascade on Ulamog', 'triggered', 1, 0],
+      ['Cascade (Ulamog)', 'triggered', 1, 0],
     ])
   })
 
   it('keeps the keyword title when the item is already named by it', () => {
     const groups = groupItems([
-      item({ title: 'Cascade (Ulamog)', text: 'Cascade (granted by Zhulodok, Void Gorger). ...' }),
+      item({ title: 'Cascade (Ulamog)', text: 'Cascade. Exile cards from the top of your library...' }),
     ])
     expect(groups.map((g) => g.title)).toEqual(['Cascade (Ulamog)'])
   })

@@ -42,7 +42,47 @@ describe('gameReducer', () => {
     const initial = run(push('A'), push('B'))
     const state = gameReducer(initial, { type: 'copy', id: initial.stack[0].id })
     expect(titles(state)).toEqual(['A', 'B', 'Copy of A'])
-    expect(state.stack[2]).toMatchObject({ kind: 'copy', copyOf: initial.stack[0].id })
+    expect(state.stack[2]).toMatchObject({
+      kind: 'copy',
+      copyOf: initial.stack[0].id,
+      origin: ['Copied by hand'],
+    })
+  })
+
+  it('records lineage through rounds of copy-all', () => {
+    const ulalekText =
+      'Whenever you cast an Eldrazi spell, you may pay {C}{C}. If you do, copy all spells you control, then copy all other activated and triggered abilities you control.'
+    const ulalek = (): GameAction => ({
+      type: 'push',
+      item: {
+        kind: 'triggered',
+        controller: YOU,
+        title: 'Ulalek, Fused Atrocity',
+        text: ulalekText,
+      },
+    })
+    let state = run(
+      {
+        type: 'push',
+        item: {
+          kind: 'spell',
+          controller: YOU,
+          title: 'Ulamog',
+          text: '',
+          origin: ['Cast from hand'],
+        },
+      },
+      ulalek(),
+      ulalek(),
+    )
+    state = gameReducer(state, { type: 'resolveTopCopyingOthers', controller: YOU })
+    state = gameReducer(state, { type: 'resolveTopCopyingOthers', controller: YOU })
+    const deepest = state.stack.find((i) => (i.origin?.length ?? 0) === 3)
+    expect(deepest?.origin).toEqual([
+      'Cast from hand',
+      'Copied by Ulalek, Fused Atrocity, round 1',
+      'Copied by Ulalek, Fused Atrocity, round 2',
+    ])
   })
 
   it('resolves the top item and copies every other item its controller has, in order', () => {
