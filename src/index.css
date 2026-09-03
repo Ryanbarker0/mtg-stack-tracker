@@ -902,3 +902,33 @@ a {
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+/* Stack summary */
+
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  font-size: 14px;
+}
+
+.summary-bar .label {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 4px;
+}
+
+.summary-bar .count strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.stack-item .effect {
+  font-size: 13px;
+  font-weight: 600;
+}

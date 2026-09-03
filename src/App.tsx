@@ -10,7 +10,7 @@ import { TriggerSheet } from './components/TriggerSheet'
 import { itemForAbility, itemForSpell } from './lib/stackItems'
 import { castTriggers, entersTriggers, type Suggestion } from './lib/triggers'
 import type { BattlefieldPermanent, Card, Deck } from './lib/types'
-import { YOU, permanentFromResolved, type NewItem } from './state/game'
+import { YOU, newId, permanentFromResolved, type NewItem } from './state/game'
 import { useDecks } from './state/useDecks'
 import { useGame } from './state/useGame'
 
@@ -20,6 +20,8 @@ interface Sheet {
   title: string
   subtitle: string
   suggestions: Suggestion[]
+  /** The spell whose cast produced these suggestions, if any. */
+  spellId?: string
 }
 
 export default function App() {
@@ -53,16 +55,22 @@ export default function App() {
     setScreen('game')
   }
 
-  const itemsFor = (chosen: Suggestion[]): NewItem[] =>
+  const itemsFor = (chosen: Suggestion[], spellId?: string): NewItem[] =>
     chosen.flatMap((s) =>
-      Array.from({ length: s.times }, () => itemForAbility(s.source, s.ability)),
+      Array.from({ length: s.times }, () => ({
+        ...itemForAbility(s.source, s.ability),
+        ...(s.copiesSpell && spellId ? { onResolve: 'copySpell' as const, refersTo: spellId } : {}),
+      })),
     )
 
   const cast = (card: Card, faceIndex: number) => {
-    dispatch({ type: 'push', item: itemForSpell(card, faceIndex) })
+    // The spell gets its id up front so its triggers can refer back to it.
+    const spellId = newId()
+    dispatch({ type: 'push', item: { ...itemForSpell(card, faceIndex), id: spellId } })
     const suggestions = castTriggers(card, faceIndex, game.battlefield, commanderIds)
     if (suggestions.length > 0) {
       setSheet({
+        spellId,
         title: `Casting ${card.faces[faceIndex]?.name ?? card.name}`,
         subtitle:
           'These abilities trigger on the cast. They go on the stack above the spell in this order, so the last row ends up on top.',
@@ -87,12 +95,6 @@ export default function App() {
       })
     }
   }
-
-  const top = game.stack[game.stack.length - 1]
-  const topIsMine = top !== undefined && top.controller === YOU
-  const others = game.stack
-    .slice(0, -1)
-    .filter((i) => i.controller === YOU && i.kind !== 'note').length
 
   return (
     <div className="app">
@@ -137,13 +139,6 @@ export default function App() {
               </button>
               <button onClick={redo} disabled={!canRedo} title="Redo">
                 ↷ Redo
-              </button>
-              <button
-                onClick={() => dispatch({ type: 'resolveTopCopyingOthers', controller: YOU })}
-                disabled={!topIsMine || others === 0}
-                title="Ulalek: resolve the top trigger and copy every other spell and ability you control"
-              >
-                ⧉ Resolve, copy all others{others > 0 && topIsMine ? ` (${others})` : ''}
               </button>
               <button
                 className={showHistory ? 'primary' : ''}
@@ -216,7 +211,7 @@ export default function App() {
           subtitle={sheet.subtitle}
           suggestions={sheet.suggestions}
           onConfirm={(chosen) => {
-            dispatch({ type: 'pushMany', items: itemsFor(chosen) })
+            dispatch({ type: 'pushMany', items: itemsFor(chosen, sheet.spellId) })
             setSheet(null)
           }}
           onSkip={() => setSheet(null)}

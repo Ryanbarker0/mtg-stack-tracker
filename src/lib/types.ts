@@ -86,6 +86,14 @@ export interface StackItem {
   originalKind?: StackItemKind
   /** Which face of the card this item represents. */
   faceIndex?: number
+  /**
+   * What the app does when this item resolves. 'copySpell' copies the spell in
+   * `refersTo` (Echoes of Eternity's "whenever you cast a colorless spell, copy it").
+   * Copies of the item inherit this, so a copied Echoes trigger copies the spell again.
+   */
+  onResolve?: 'copySpell'
+  /** Stack item id this item refers to, e.g. the spell whose cast triggered it. */
+  refersTo?: string
   /** Free-form annotation the user typed, e.g. targets. */
   note?: string
   /** The full card, when the item came from one, so the detail view can show image and rulings. */

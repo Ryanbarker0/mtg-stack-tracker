@@ -29,7 +29,11 @@ export interface Suggestion {
   doubledBy?: string
   /** True when the source is a commander; these are placed on top of the stack. */
   fromCommander: boolean
+  /** True when the ability copies the spell that triggered it ("whenever you cast ..., copy it"). */
+  copiesSpell: boolean
 }
+
+const COPIES_SPELL_PATTERN = /\bcopy (?:it|that spell)\b/i
 
 const CAST_PATTERN =
   /\bwhenever you cast (?:a|an|your first|another|one or more) ([a-z][a-z\- ]*?) spells?\b(.*)$/i
@@ -162,6 +166,7 @@ export function castTriggers(
       certain: true,
       ...doublersFor(spell, battlefield),
       fromCommander: false,
+      copiesSpell: false,
     })
   }
 
@@ -179,6 +184,7 @@ export function castTriggers(
         certain,
         ...doublersFor(permanent.card, battlefield),
         fromCommander: commanderIds.has(permanent.card.oracleId),
+        copiesSpell: COPIES_SPELL_PATTERN.test(ability.text),
       })
     }
   }
@@ -209,6 +215,7 @@ export function entersTriggers(
       certain: true,
       ...doublersFor(permanent.card, battlefield),
       fromCommander: commanderIds.has(permanent.card.oracleId),
+      copiesSpell: false,
     })
   }
 
@@ -228,6 +235,7 @@ export function entersTriggers(
         certain,
         ...doublersFor(watcher.card, battlefield),
         fromCommander: commanderIds.has(watcher.card.oracleId),
+        copiesSpell: false,
       })
     }
   }

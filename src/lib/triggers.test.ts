@@ -98,6 +98,15 @@ describe('castTriggers', () => {
     expect(result).toEqual([])
   })
 
+  it('flags Echoes of Eternity as copying the spell so the app can do it on resolve', () => {
+    const result = castTriggers(kozilek, 0, [onField(echoes), onField(monument)], commanderIds)
+    expect(result.map((s) => [s.source.name, s.copiesSpell])).toEqual([
+      ['Kozilek, Butcher of Truth', false],
+      ['Echoes of Eternity', true],
+      ['Forsaken Monument', false],
+    ])
+  })
+
   it('doubles triggers from colorless sources when Echoes of Eternity is out, but not its own', () => {
     const result = castTriggers(kozilek, 0, [onField(ulalek), onField(echoes)], commanderIds)
     expect(result.map((s) => [s.source.name, s.times, s.doubledBy])).toEqual([

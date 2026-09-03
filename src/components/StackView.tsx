@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Card, GameState, StackItem } from '../lib/types'
-import { YOU, type GameAction } from '../state/game'
+import { YOU, copiesAllOthers, type GameAction } from '../state/game'
+import { StackSummary } from './StackSummary'
 
 interface Props {
   game: GameState
@@ -26,21 +27,33 @@ export function StackView({ game, dispatch, onResolveTop, onShowCard }: Props) {
       </div>
     )
   }
+  const titleOf = (id: string | undefined) =>
+    game.stack.find((i) => i.id === id)?.title.replace(/^Copy of /, '')
   return (
-    <div className="stack-list">
-      {items.map((item, index) => (
-        <StackRow
-          key={item.id}
-          item={item}
-          isTop={index === 0}
-          isBottom={index === items.length - 1}
-          position={game.stack.length - index}
-          dispatch={dispatch}
-          onResolveTop={onResolveTop}
-          onShowCard={onShowCard}
-        />
-      ))}
-    </div>
+    <>
+      <StackSummary stack={game.stack} />
+      <div className="stack-list">
+        {items.map((item, index) => (
+          <StackRow
+            key={item.id}
+            item={item}
+            isTop={index === 0}
+            isBottom={index === items.length - 1}
+            position={game.stack.length - index}
+            refersToTitle={item.onResolve === 'copySpell' ? titleOf(item.refersTo) : undefined}
+            othersToCopy={
+              index === 0
+                ? game.stack.slice(0, -1).filter((i) => i.controller === YOU && i.kind !== 'note')
+                    .length
+                : 0
+            }
+            dispatch={dispatch}
+            onResolveTop={onResolveTop}
+            onShowCard={onShowCard}
+          />
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -49,6 +62,10 @@ interface RowProps {
   isTop: boolean
   isBottom: boolean
   position: number
+  /** For "copy it" triggers, the name of the spell they will copy, if it is still on the stack. */
+  refersToTitle?: string
+  /** For the top item, how many of the controller's other items a copy-all trigger would copy. */
+  othersToCopy: number
   dispatch: (action: GameAction) => void
   onResolveTop: () => void
   onShowCard: (card: Card) => void
@@ -59,6 +76,8 @@ function StackRow({
   isTop,
   isBottom,
   position,
+  refersToTitle,
+  othersToCopy,
   dispatch,
   onResolveTop,
   onShowCard,
@@ -89,6 +108,19 @@ function StackRow({
         </div>
         <div className="item-title">{item.title}</div>
         {item.text && <div className={`item-text ${expanded ? 'expanded' : ''}`}>{item.text}</div>}
+        {item.onResolve === 'copySpell' && (
+          <div className="effect kind-copy">
+            {refersToTitle
+              ? `On resolve: copies ${refersToTitle}`
+              : 'On resolve: nothing, the spell has left the stack'}
+          </div>
+        )}
+        {isTop && copiesAllOthers(item) && (
+          <div className="effect kind-copy">
+            Pay {'{C}{C}'} to copy the {othersToCopy} other item{othersToCopy === 1 ? '' : 's'} you
+            control
+          </div>
+        )}
         {(editingNote || item.note) && (
           <div className="note" onClick={(e) => e.stopPropagation()}>
             <input
@@ -105,7 +137,20 @@ function StackRow({
         )}
       </div>
       <div className="actions">
-        {isTop ? (
+        {isTop && copiesAllOthers(item) && othersToCopy > 0 ? (
+          <>
+            <button
+              className="primary"
+              onClick={() => dispatch({ type: 'resolveTopCopyingOthers', controller: YOU })}
+              title="Pay {C}{C}: resolve and copy every other spell and ability you control"
+            >
+              Pay, copy all
+            </button>
+            <button onClick={onResolveTop} title="Resolve without paying; nothing is copied">
+              Don’t pay
+            </button>
+          </>
+        ) : isTop ? (
           <button className="primary" onClick={onResolveTop}>
             Resolve
           </button>

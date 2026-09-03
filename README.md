@@ -22,7 +22,11 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - When you Cast, the app reads the oracle text of your permanents and offers every "whenever you cast" trigger that matches the spell, plus the spell's own "when you cast" trigger, in one sheet.
   Your commander's trigger is placed on top of the stack so it resolves first.
   When a permanent resolves, the same sheet offers its "when this enters" trigger and any "whenever a creature enters" triggers you control.
-- A doubler such as Echoes of Eternity is applied as a ×2 on triggers from colorless sources.
+- Echoes of Eternity is handled on both lines.
+  Its doubling is applied as a ×2 on suggested triggers from colorless sources, and its "copy it" trigger copies the spell automatically when it resolves.
+  Copies of that trigger, such as those Ulalek makes, copy the spell again.
+- When a copy-all trigger such as Ulalek's is on top, the item shows "Pay, copy all" and "Don't pay" so the choice is explicit.
+- A grouped summary above the stack counts what is there, so a 50-item Ulalek stack can be read to the table.
 - Every sheet is a suggestion you confirm.
   Conditions the app cannot evaluate, such as Guardian Project's name check, are offered with a "Check condition" tag.
 - The stack is drawn top-first.

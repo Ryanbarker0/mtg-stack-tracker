@@ -15,7 +15,8 @@ import type { BattlefieldPermanent, Card, GameState, StackItem } from '../lib/ty
 
 export const YOU = 'You'
 
-export type NewItem = Omit<StackItem, 'id' | 'createdAt'>
+/** A stack item before it is placed. The caller may fix the id so other items can refer to it. */
+export type NewItem = Omit<StackItem, 'id' | 'createdAt'> & { id?: string }
 
 export type GameAction =
   | { type: 'push'; item: NewItem }
@@ -41,7 +42,12 @@ export function newId(): string {
 }
 
 function makeItem(item: NewItem): StackItem {
-  return { ...item, id: newId(), createdAt: Date.now() }
+  return { ...item, id: item.id ?? newId(), createdAt: Date.now() }
+}
+
+/** True for a trigger that copies everything else when it resolves (Ulalek). */
+export function copiesAllOthers(item: StackItem): boolean {
+  return /copy all spells you control/i.test(item.text)
 }
 
 function makePermanent(card: Card, faceIndex = 0, isToken = false): BattlefieldPermanent {
@@ -69,8 +75,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.stack.length === 0) return state
       const top = state.stack[state.stack.length - 1]
       const entering = permanentFromResolved(top)
+      let stack = state.stack.slice(0, -1)
+      if (top.onResolve === 'copySpell') {
+        // "Copy it": the spell may already have resolved or been countered, in which case
+        // the trigger does nothing.
+        const spell = stack.find((i) => i.id === top.refersTo)
+        if (spell) stack = [...stack, makeCopy(spell)]
+      }
       return {
-        stack: state.stack.slice(0, -1),
+        stack,
         history: [...state.history, { item: top, outcome: 'resolved', at: Date.now() }],
         battlefield: entering ? [...state.battlefield, entering] : state.battlefield,
       }
@@ -102,16 +115,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'resolveTopCopyingOthers': {
       // The top object resolves and, as it does, copies every other spell and ability its
       // controller has on the stack (Ulalek's trigger). Copies are created above the
-      // originals (CR 707.10) in the same relative order so the visual order stays honest.
+      // originals (CR 707.10) in the same relative order, except that copies of other
+      // copy-all triggers go on top: the controller chooses the order, and keeping the
+      // next Ulalek trigger on top is what makes the chain readable and repeatable.
       if (state.stack.length === 0) return state
       const top = state.stack[state.stack.length - 1]
       const remaining = state.stack.slice(0, -1)
       const sources = remaining.filter(
         (i) => i.controller === action.controller && i.kind !== 'note',
       )
+      const ordered = [
+        ...sources.filter((i) => !copiesAllOthers(i)),
+        ...sources.filter((i) => copiesAllOthers(i)),
+      ]
       return {
         ...state,
-        stack: [...remaining, ...sources.map(makeCopy)],
+        stack: [...remaining, ...ordered.map(makeCopy)],
         history: [...state.history, { item: top, outcome: 'resolved', at: Date.now() }],
       }
     }

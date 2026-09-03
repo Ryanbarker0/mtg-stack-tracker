@@ -155,4 +155,86 @@ describe('gameReducer', () => {
     expect(state.stack).toEqual([])
     expect(state.battlefield.map((p) => p.card.name)).toEqual(['Ulalek, Fused Atrocity'])
   })
+
+  it('a "copy it" trigger copies its spell when it resolves, and its copies do too', () => {
+    let state = gameReducer(emptyGame(), {
+      type: 'push',
+      item: { kind: 'spell', controller: YOU, title: 'Ulamog', text: '', id: 'spell-1' },
+    })
+    state = gameReducer(state, {
+      type: 'push',
+      item: {
+        kind: 'triggered',
+        controller: YOU,
+        title: 'Echoes of Eternity',
+        text: 'Whenever you cast a colorless spell, copy it.',
+        onResolve: 'copySpell',
+        refersTo: 'spell-1',
+      },
+    })
+    // Ulalek copies the Echoes trigger; the copy still refers to the spell.
+    state = gameReducer(state, { type: 'copy', id: state.stack[1].id })
+    expect(state.stack[2]).toMatchObject({ onResolve: 'copySpell', refersTo: 'spell-1' })
+
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(titles(state)).toEqual(['Ulamog', 'Echoes of Eternity', 'Copy of Ulamog'])
+    state = gameReducer(state, { type: 'resolveTop' }) // the Ulamog copy resolves
+    state = gameReducer(state, { type: 'resolveTop' }) // the original Echoes trigger
+    expect(titles(state)).toEqual(['Ulamog', 'Copy of Ulamog'])
+  })
+
+  it('a "copy it" trigger does nothing if its spell has left the stack', () => {
+    let state = gameReducer(emptyGame(), {
+      type: 'push',
+      item: { kind: 'spell', controller: YOU, title: 'Ulamog', text: '', id: 'spell-1' },
+    })
+    state = gameReducer(state, {
+      type: 'push',
+      item: {
+        kind: 'triggered',
+        controller: YOU,
+        title: 'Echoes',
+        text: '',
+        onResolve: 'copySpell',
+        refersTo: 'spell-1',
+      },
+    })
+    state = gameReducer(state, { type: 'remove', id: 'spell-1' })
+    state = gameReducer(state, { type: 'resolveTop' })
+    expect(state.stack).toEqual([])
+  })
+
+  it('accepts a caller-supplied id so triggers can refer to their spell', () => {
+    const state = gameReducer(emptyGame(), {
+      type: 'push',
+      item: { kind: 'spell', controller: YOU, title: 'A', text: '', id: 'fixed' },
+    })
+    expect(state.stack[0].id).toBe('fixed')
+  })
+
+  it('puts copies of other copy-all triggers on top so the Ulalek chain stays on top', () => {
+    const ulalekText =
+      'Whenever you cast an Eldrazi spell, you may pay {C}{C}. If you do, copy all spells you control, then copy all other activated and triggered abilities you control.'
+    const initial = run(
+      push('Ulamog', YOU, 'spell'),
+      {
+        type: 'push',
+        item: { kind: 'triggered', controller: YOU, title: 'Ulalek A', text: ulalekText },
+      },
+      push('Echoes', YOU, 'triggered'),
+      {
+        type: 'push',
+        item: { kind: 'triggered', controller: YOU, title: 'Ulalek B', text: ulalekText },
+      },
+    )
+    const state = gameReducer(initial, { type: 'resolveTopCopyingOthers', controller: YOU })
+    expect(titles(state)).toEqual([
+      'Ulamog',
+      'Ulalek A',
+      'Echoes',
+      'Copy of Ulamog',
+      'Copy of Echoes',
+      'Copy of Ulalek A',
+    ])
+  })
 })
