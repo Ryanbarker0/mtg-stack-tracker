@@ -22,6 +22,8 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - When you Cast, the app reads the oracle text of your permanents and offers every "whenever you cast" trigger that matches the spell, plus the spell's own "when you cast" trigger, in one sheet.
   Your commander's trigger is placed on top of the stack so it resolves first.
   When a permanent resolves, the same sheet offers its "when this enters" trigger and any "whenever a creature enters" triggers you control.
+- Abilities a permanent grants to the spell are offered too.
+  Zhulodok's double cascade appears as the spell's own trigger, doubled again by Echoes.
 - Echoes of Eternity is handled on both lines.
   Its doubling is applied as a ×2 on suggested triggers from colorless sources, and its "copy it" trigger copies the spell automatically when it resolves.
   Copies of that trigger, such as those Ulalek makes, copy the spell again.
@@ -80,7 +82,9 @@ The app installs as a standalone PWA and updates itself on the next launch after
 - Archidekt blocks browser requests from other origins, so decks are imported by pasting the text export rather than by URL.
 - Ability classification is text-based.
   Unusual wording may be misclassified, which is why the import review exists.
-- Trigger suggestions only understand "whenever you cast a[n] X spell" and "whenever a[n] X enters", evaluated against Scryfall's type line and colours.
+- Trigger suggestions only understand "whenever you cast a[n] X spell", "whenever a[n] X enters" and granted cascade, evaluated against Scryfall's type line and colours.
+  Mana value conditions are not evaluated and are flagged "Check condition".
+  Graveyard triggers such as Kozilek's Return are not modelled; tap them from the palette.
   Anything else on your permanents still has to be tapped by hand from the palette.
 - Decks imported before colours were stored do not know which cards are colorless.
   Re-import the deck and "colorless" conditions will evaluate.

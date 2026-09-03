@@ -1,4 +1,4 @@
-import { extractAbilities } from './abilities'
+import { extractAbilities, splitOracleText } from './abilities'
 import type { Ability, BattlefieldPermanent, Card, CardFace } from './types'
 
 /**
@@ -38,6 +38,9 @@ const COPIES_SPELL_PATTERN = /\bcopy (?:it|that spell)\b/i
 const CAST_PATTERN =
   /\bwhenever you cast (?:a|an|your first|another|one or more) ([a-z][a-z\- ]*?) spells?\b(.*)$/i
 const OWN_CAST_PATTERN = /^when you cast this spell\b/i
+const OWN_CAST_CONDITION = /^when you cast this spell, if\b/i
+/** "Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade."" */
+const GRANTED_CASCADE_PATTERN = /^(.*?)\bspells? you cast\b(.*?) have "((?:cascade[,.]?\s*)+)"/i
 const ENTERS_PATTERN =
   /\bwhenever (?:a|an|another|one or more) ([a-z][a-z\- ]*?) (?:you control )?enters?\b(?:\s+(?:the battlefield\s+)?under your control)?(.*)$/i
 const OWN_ENTERS_PATTERN = /^when (?:this|[^,]+?) enters\b/i
@@ -163,11 +166,46 @@ export function castTriggers(
       source: spell,
       sourceFaceIndex: spellFaceIndex,
       ability,
-      certain: true,
+      // "When you cast this spell, if ..." has an intervening-if the app cannot check.
+      certain: OWN_CAST_CONDITION.test(ability.text) ? undefined : true,
       ...doublersFor(spell, battlefield),
       fromCommander: false,
       copiesSpell: false,
     })
+  }
+
+  // Abilities granted to the spell by a permanent, e.g. Zhulodok's double cascade. The
+  // trigger belongs to the spell, so Echoes doubles it like any other colorless spell trigger.
+  for (const permanent of battlefield) {
+    const face = permanent.card.faces[permanent.faceIndex] ?? permanent.card.faces[0]
+    for (const line of splitOracleText(face.oracleText)) {
+      const main = line.replace(/\s*\([^)]*\)/g, '')
+      const match = GRANTED_CASCADE_PATTERN.exec(main)
+      if (!match) continue
+      let certain = qualifierMatches(match[1].trim() || 'spell', subject)
+      if (certain === false) continue
+      if (certain && trailingClauseMakesUncertain(match[2])) certain = undefined
+      const cascades = (match[3].match(/cascade/gi) ?? []).length
+      const reminder = /\(([^)]*)\)/.exec(line)?.[1] ?? ''
+      const doubling = doublersFor(spell, battlefield)
+      suggestions.push({
+        source: spell,
+        sourceFaceIndex: spellFaceIndex,
+        ability: {
+          id: `${spell.oracleId}:${spellFaceIndex}:granted:${permanent.card.oracleId}`,
+          cardOracleId: spell.oracleId,
+          faceIndex: spellFaceIndex,
+          kind: 'triggered',
+          text: `Cascade (granted by ${permanent.card.name}). ${reminder}`.trim(),
+          fromKeyword: true,
+        },
+        certain,
+        times: cascades * doubling.times,
+        doubledBy: [permanent.card.name, doubling.doubledBy].filter(Boolean).join(' + '),
+        fromCommander: false,
+        copiesSpell: false,
+      })
+    }
   }
 
   for (const permanent of battlefield) {

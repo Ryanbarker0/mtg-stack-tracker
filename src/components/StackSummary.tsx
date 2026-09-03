@@ -22,7 +22,10 @@ export function StackSummary({ stack }: Props) {
   const groups = new Map<string, Group>()
   for (const item of stack) {
     const kind = item.kind === 'copy' ? (item.originalKind ?? 'spell') : item.kind
-    const title = item.title.replace(/^Copy of /, '')
+    const base = item.title.replace(/^Copy of /, '')
+    // A granted keyword trigger reads "Cascade (granted by Zhulodok...)"; name it by the keyword.
+    const granted = /^([A-Z][a-z]+) \(granted by /.exec(item.text)
+    const title = granted ? `${granted[1]} on ${base}` : base
     // Different abilities of the same card are different groups, so key on the text too.
     const key = `${kind}|${title}|${kind === 'spell' ? '' : item.text.slice(0, 40)}`
     const group = groups.get(key) ?? { key, title, kind, originals: 0, copies: 0 }

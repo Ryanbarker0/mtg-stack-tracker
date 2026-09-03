@@ -126,9 +126,8 @@ function PaletteCard({
 }: CardProps) {
   const abilities = extractAbilities(card)
   const front = card.faces[0]
-  const isPermanentCard = card.faces.some(
-    (f) => !isLand(f) && !/\b(Instant|Sorcery)\b/.test(f.typeLine),
-  )
+  // Lands are permanents too: Sanctum of Ugin's cast trigger only matters once it is in play.
+  const isPermanentCard = card.faces.some((f) => !/\b(Instant|Sorcery)\b/.test(f.typeLine))
   const inPlay = onField.length > 0
   return (
     <div className="palette-card">

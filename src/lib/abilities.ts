@@ -81,6 +81,9 @@ const ACTIVATED_KEYWORDS = [
 
 const TRIGGER_START = /^(when|whenever|at)\b/i
 
+/** Verbs that mark a line as granting or modifying something rather than being an ability of its own. */
+const GRANTING_VERB = /\b(gets?|has|have|gains?|becomes?)\b/i
+
 /** Ability words ("Landfall — Whenever ...") prefix the real text with a word and a dash. */
 const ABILITY_WORD_PREFIX = /^[A-Z][A-Za-z' ]{1,30}\s+[—–-]\s+/
 
@@ -90,7 +93,7 @@ export function classifyLine(line: string): AbilityKind {
   const main = withoutAbilityWord.replace(/\s*\([^)]*\)/g, '').trim()
   const lower = main.toLowerCase()
 
-  if (TRIGGER_START.test(main) || TRIGGER_START.test(reminder.trim())) {
+  if (TRIGGER_START.test(main)) {
     return isTriggeredManaAbility(main) ? 'mana' : 'triggered'
   }
 
@@ -99,6 +102,13 @@ export function classifyLine(line: string): AbilityKind {
     const effect = main.slice(colonIndex + 1).trim()
     return isManaEffect(effect) ? 'mana' : 'activated'
   }
+
+  // A line that grants abilities to something else ("Enchanted creature has ...",
+  // "Colorless spells you cast ... have 'Cascade'") is itself a static ability, however its
+  // reminder text or keyword list reads. The granted ability's owner is what goes on the stack.
+  if (GRANTING_VERB.test(main)) return 'static'
+
+  if (TRIGGER_START.test(reminder.trim())) return 'triggered'
   if (findCostColon(reminder) >= 0) {
     const effect = reminder.slice(findCostColon(reminder) + 1).trim()
     return isManaEffect(effect) ? 'mana' : 'activated'

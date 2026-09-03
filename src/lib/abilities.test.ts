@@ -69,6 +69,16 @@ describe('classifyLine', () => {
     expect(classifyLine('Flying')).toBe('static')
     expect(classifyLine('Eldrazi spells you cast cost {1} less to cast.')).toBe('static')
     expect(classifyLine('Enchanted creature has "{T}: Add {C}."')).toBe('static')
+    expect(
+      classifyLine(
+        'Enchanted creature gets +10/+10 and has trample and annihilator 2. (Whenever this creature attacks, defending player sacrifices two permanents of their choice.)',
+      ),
+    ).toBe('static')
+    expect(
+      classifyLine(
+        'Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade." (When you cast one, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order. Then do it again.)',
+      ),
+    ).toBe('static')
   })
 
   it('does not treat a modal "Choose one:" colon as a cost', () => {

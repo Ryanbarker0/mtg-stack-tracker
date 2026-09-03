@@ -117,6 +117,39 @@ describe('castTriggers', () => {
   })
 })
 
+describe('granted abilities', () => {
+  const zhulodok = card(
+    'Zhulodok, Void Gorger',
+    'Legendary Creature — Eldrazi',
+    'Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade." (When you cast one, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order. Then do it again.)',
+  )
+
+  it("offers Zhulodok's double cascade as the spell's own trigger, doubled by Echoes", () => {
+    const result = castTriggers(kozilek, 0, [onField(zhulodok), onField(echoes)], new Set())
+    const cascade = result.find((s) => s.ability.fromKeyword)
+    expect(cascade).toMatchObject({
+      source: kozilek,
+      certain: undefined,
+      times: 4,
+      doubledBy: 'Zhulodok, Void Gorger + Echoes of Eternity',
+    })
+    expect(cascade?.ability.text).toMatch(
+      /^Cascade \(granted by Zhulodok, Void Gorger\)\. When you cast one, exile cards/,
+    )
+    expect(castTriggers(counterspell, 0, [onField(zhulodok)], new Set())).toEqual([])
+  })
+
+  it('marks an own cast trigger with an intervening if as uncertain', () => {
+    const distortion = card(
+      'Kozilek, the Great Distortion',
+      'Legendary Creature — Eldrazi',
+      'When you cast this spell, if you have fewer than seven cards in hand, draw cards equal to the difference.\nMenace\nDiscard a card with mana value X: Counter target spell with mana value X.',
+    )
+    const result = castTriggers(distortion, 0, [], new Set())
+    expect(result.map((s) => s.certain)).toEqual([undefined])
+  })
+})
+
 describe('entersTriggers', () => {
   it('offers enters triggers from the battlefield and marks intervening-if conditions uncertain', () => {
     const entering = onField(kozilek)
