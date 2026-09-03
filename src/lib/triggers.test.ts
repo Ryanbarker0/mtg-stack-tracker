@@ -200,6 +200,19 @@ describe('mana value conditions', () => {
     )
   })
 
+  it('notes that a doubled self-sacrifice trigger only does anything once', () => {
+    const result = castTriggers(kozilek, 0, [onField(sanctum), onField(echoes)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0].times).toBe(2)
+    expect(result[0].note).toMatch(/only the first/)
+    const single = castTriggers(kozilek, 0, [onField(sanctum)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(single[0].note).toBeUndefined()
+  })
+
   it('asks the user when the mana value was never stored', () => {
     const old = { ...kozilek, manaValue: undefined }
     const result = castTriggers(old, 0, [onField(sanctum)], new Set()).filter(

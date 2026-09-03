@@ -33,6 +33,32 @@ export interface Suggestion {
   copiesSpell: boolean
   /** When `certain` is undefined, the clause the user needs to check, in the card's words. */
   uncertainReason?: string
+  /** A rules note worth showing, e.g. that extra copies of a self-sacrifice trigger do nothing. */
+  note?: string
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** "you may sacrifice this land", "Sacrifice Sanctum of Ugin": the ability removes its own source. */
+function sacrificesItself(text: string, sourceName: string): boolean {
+  const shortName = sourceName.split(',')[0]
+  return new RegExp(
+    `\\bsacrifice (this (land|creature|artifact|enchantment|permanent)|${escapeRegExp(shortName)})\\b`,
+    'i',
+  ).test(text)
+}
+
+/** Adds the self-sacrifice note when an ability will be on the stack more than once. */
+function withNotes(suggestion: Suggestion): Suggestion {
+  if (suggestion.times > 1 && sacrificesItself(suggestion.ability.text, suggestion.source.name)) {
+    return {
+      ...suggestion,
+      note: 'Sacrifices itself, so only the first of these to resolve does anything. The rest fizzle.',
+    }
+  }
+  return suggestion
 }
 
 interface Evaluation {
@@ -371,7 +397,9 @@ export function entersTriggers(
  * what a copy commander such as Ulalek wants. The user can still reorder on the stack.
  */
 function orderForStack(suggestions: Suggestion[]): Suggestion[] {
-  return [...suggestions].sort((a, b) => Number(a.fromCommander) - Number(b.fromCommander))
+  return [...suggestions]
+    .map(withNotes)
+    .sort((a, b) => Number(a.fromCommander) - Number(b.fromCommander))
 }
 
 /** Whether a resolving spell becomes a permanent (CR 608.3). */

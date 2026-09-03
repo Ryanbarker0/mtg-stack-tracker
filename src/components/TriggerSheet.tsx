@@ -60,6 +60,7 @@ export function TriggerSheet({ title, subtitle, suggestions, onConfirm, onSkip }
                     )}
                   </span>
                   <span className="text">{s.ability.text}</span>
+                  {s.note && <span className="note-text">{s.note}</span>}
                 </span>
               </button>
             ))}

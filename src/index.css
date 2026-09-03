@@ -932,3 +932,8 @@ a {
   font-size: 13px;
   font-weight: 600;
 }
+
+.suggestion .note-text {
+  font-size: 13px;
+  color: var(--kind-triggered);
+}
