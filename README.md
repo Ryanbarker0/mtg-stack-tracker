@@ -9,7 +9,8 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 
 ## What it does
 
-- Import a deck by pasting a decklist from Archidekt or Moxfield.
+- Import a deck by pasting a decklist from Archidekt or Moxfield, or load one of the lists shipped in `public/decks/`.
+  Add a text file there and an entry in `index.json` to ship another.
 - Every card is looked up on Scryfall.
   No card text is hand-authored or assumed.
 - Each paragraph of oracle text is classified as triggered, activated, mana or static.

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { castTriggerTypes, includedByDefault, inclusionReason } from '../lib/abilities'
 import { Caveats } from './Caveats'
 import { parseDecklist } from '../lib/decklist'
@@ -10,6 +10,24 @@ interface Props {
   onSave: (deck: Deck) => void
   onCancel: () => void
   onShowCard: (card: Card) => void
+}
+
+interface Preset {
+  id: string
+  name: string
+  file: string
+  note?: string
+}
+
+/** Decklists shipped with the app, listed in public/decks/index.json. */
+async function loadPresets(): Promise<Preset[]> {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}decks/index.json`)
+    if (!response.ok) return []
+    return (await response.json()) as Preset[]
+  } catch {
+    return []
+  }
 }
 
 type Step =
@@ -34,6 +52,29 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
   const [name, setName] = useState('')
   const [step, setStep] = useState<Step>({ name: 'paste' })
   const [error, setError] = useState<string | null>(null)
+  const [presets, setPresets] = useState<Preset[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    loadPresets().then((list) => {
+      if (!cancelled) setPresets(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const applyPreset = async (preset: Preset) => {
+    setError(null)
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}decks/${preset.file}`)
+      if (!response.ok) throw new Error(`Could not load ${preset.name}`)
+      setText(await response.text())
+      if (!name) setName(preset.name)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not load the preset')
+    }
+  }
 
   const start = async () => {
     setError(null)
@@ -93,6 +134,20 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
       {step.name === 'paste' && (
         <>
           <Caveats open />
+          {presets.length > 0 && (
+            <div className="row wrap">
+              <span className="muted">Built-in lists:</span>
+              {presets.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => void applyPreset(preset)}
+                  title={preset.note}
+                >
+                  Load {preset.name}
+                </button>
+              ))}
+            </div>
+          )}
           <textarea
             rows={16}
             placeholder={PLACEHOLDER}

@@ -1,0 +1,103 @@
+Commander
+1x Ulalek, Fused Atrocity (m3c) 4
+
+Deck
+1x Adarkar Wastes (eoc) 147
+1x All Is Dust (m3c) 152
+1x Ancient Stirrings (m3c) 219
+1x Ancient Tomb (plst) TMP-315
+1x Anticausal Vestige (eoe) 1
+1x Arcane Signet (msc) 193
+1x Artisan of Kozilek (m3c) 153
+1x Ash Barrens (tmc) 60
+1x Battlefield Forge (soc) 362
+1x Brushland (fic) 377
+1x Cascading Cataracts (m3c) 326
+1x Cavern of Souls (lci) 269
+1x Caves of Koilos (soc) 365
+1x Cloud Key (eoc) 54
+1x Cloudpost (m3c) 330
+1x Command Tower (msc) 236
+1x Conduit of Ruin (bfz) 4
+1x Corrupted Crossroads (m3c) 332
+1x Crib Swap (ecl) 11
+1x Crop Rotation (dmr) 154
+1x Devourer of Destiny (mh3) 2
+1x Drowner of Hope (m3c) 182
+1x Echoes of Eternity (mh3) 320
+1x Elder Deep-Fiend (inr) 4
+1x Eldrazi Confluence (m3c) 32
+1x Eldrazi Temple (m3c) 339
+1x Eldritch Immunity (m3c) 33
+1x Endbringer (m3c) 156
+1x Everflowing Chalice (eoc) 137
+1x Exotic Orchard (msc) 241
+1x Expedition Map (fdn) 724
+1x Eye of Ugin (mm2) 242
+1x Forest (trk) 325
+1x Forsaken Monument (m3c) 293
+1x Garruk's Uprising (ecc) 109
+1x Guardian Project (pip) 199
+1x Hedron Archive (fdn) 726
+1x Herald's Horn (msc) 287
+1x Idol of Oblivion (tdc) 319
+1x Island (trk) 320
+1x It That Heralds the End (mh3) 9
+1x Karplusan Forest (eoc) 164
+1x Kozilek's Command (pmh3) 11p
+1x Kozilek's Return (m3c) 214
+1x Kozilek's Unsealing (mh3) 65
+1x Kozilek, the Great Distortion (cmm) 2
+1x Lightning Greaves (msc) 202
+1x Llanowar Wastes (soc) 383
+1x Mana Vault (2x2) 308
+1x Matter Reshaper (cmm) 806
+1x Mind Stone (soc) 352
+1x Mountain (trk) 324
+1x Mystic Forge (m3c) 302
+1x Not of This World (cmm) 807
+1x Oblivion Sower (m3c) 158
+1x Palladium Myr (cmm) 967
+1x Path of Ancestry (msc) 254
+1x Plains (trk) 318
+1x Reality Smasher (ogw) 7
+1x Reliquary Tower (soc) 398
+1x Ruins of Oran-Rief (m3c) 370
+1x Sanctum of Ugin (bfz) 242
+1x Secluded Courtyard (msc) 265
+1x Semblance Anvil (som) 201
+1x Shivan Reef (soc) 404
+1x Shrine of the Forsaken Gods (m3c) 376
+1x Sifter of Skulls (m3c) 203
+1x Sol Ring (msc) 213
+1x Spatial Contortion (cmm) 809
+1x Spire of Industry (eoc) 183
+1x Strionic Resonator (moc) 384
+1x Sulfurous Springs (eoc) 185
+1x Swamp (trk) 322
+1x Sylvan Scrying (m3c) 248
+1x Talisman of Curiosity (drc) 140
+1x Talisman of Dominance (msc) 219
+1x Talisman of Impulse (tdc) 332
+1x Talisman of Resilience (dsc) 255
+1x Tendo Ice Bridge (m3c) 393
+1x Thought Vessel (msc) 222
+1x Thought-Knot Seer (plst) OGW-9
+1x Thran Dynamo (msc) 290
+1x Titan's Presence (cmm) 810
+1x Tranquil Landscape (mh3) 231
+1x Ugin's Labyrinth (mh3) 233
+1x Ugin, the Ineffable (m3c) 160
+1x Ugin, the Spirit Dragon (m21) 1
+1x Ulamog, the Ceaseless Hunger (cmm) 5
+1x Unclaimed Territory (msc) 275
+1x Underground River (fic) 439
+1x Urza's Incubator (mh3) 297
+1x Vedalken Orrery (2x2) 317
+1x Vesuva (m3c) 404
+1x Warping Wail (m3c) 162
+1x Wastes (eoc) 191
+1x World Breaker (eoc) 112
+1x Worn Powerstone (mh3) 298
+1x Yavimaya Coast (soc) 425
+1x Zhulodok, Void Gorger (cmm) 704
