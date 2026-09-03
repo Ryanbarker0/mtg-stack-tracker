@@ -24,11 +24,15 @@ export function itemForAbility(card: Card, ability: Ability, controller = YOU): 
 /** A card being cast as a spell. */
 export function itemForSpell(card: Card, faceIndex = 0, controller = YOU): NewStackItem {
   const face = card.faces[faceIndex] ?? card.faces[0]
+  // A permanent spell on the stack is just the creature or artifact itself; its abilities
+  // are not what is resolving, so the item shows the type line. Instants and sorceries
+  // show their text because that is the effect.
+  const isPermanent = !/\b(Instant|Sorcery)\b/.test(face.typeLine)
   return {
     kind: 'spell',
     controller,
     title: face.name,
-    text: face.oracleText || face.typeLine,
+    text: isPermanent ? face.typeLine : face.oracleText || face.typeLine,
     imageUrl: face.imageUrl,
     scryfallUri: card.scryfallUri,
     card,

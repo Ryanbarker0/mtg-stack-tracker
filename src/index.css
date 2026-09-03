@@ -394,23 +394,29 @@ a {
 }
 
 .bar-spell {
-  background: var(--kind-spell);
+  --bar: var(--kind-spell);
 }
 .bar-triggered {
-  background: var(--kind-triggered);
+  --bar: var(--kind-triggered);
 }
 .bar-activated {
-  background: var(--kind-activated);
-}
-.bar-copy {
-  background: repeating-linear-gradient(to bottom, var(--kind-copy) 0 8px, transparent 8px 12px);
+  --bar: var(--kind-activated);
 }
 .bar-note {
-  background: var(--kind-note);
+  --bar: var(--kind-note);
 }
 .bar-mana,
 .bar-static {
-  background: var(--kind-mana);
+  --bar: var(--kind-mana);
+}
+
+.bar {
+  background: var(--bar);
+}
+
+/* A copy keeps the colour of what it copies, drawn dashed. */
+.bar.copy {
+  background: repeating-linear-gradient(to bottom, var(--bar) 0 8px, transparent 8px 12px);
 }
 
 /* Stack */

@@ -158,6 +158,8 @@ function StackRow({
   const [expanded, setExpanded] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const opponent = item.controller !== YOU
+  // Copies take the colour of what they copy; the dashed bar marks them as copies.
+  const kind = item.kind === 'copy' ? (item.originalKind ?? 'spell') : item.kind
 
   return (
     <div
@@ -165,7 +167,7 @@ function StackRow({
         item.createdAt > mountedAt ? 'entering' : ''
       }`}
     >
-      <span className={`bar bar-${item.kind}`} />
+      <span className={`bar bar-${kind} ${item.kind === 'copy' ? 'copy' : ''}`} />
       {item.imageUrl ? (
         <img
           className="thumb"
@@ -180,10 +182,8 @@ function StackRow({
         <div className="meta">
           {isTop && <span className="top-label">▲ Resolves next</span>}
           {!isTop && <span className="faint">#{position}</span>}
-          <span className={`kind-${item.kind}`}>
-            {item.kind === 'copy'
-              ? `copy of ${shortKind(item.originalKind ?? 'spell')}`
-              : item.kind}
+          <span className={`kind-${kind}`}>
+            {item.kind === 'copy' ? `copy of ${shortKind(kind)}` : item.kind}
           </span>
           <span className={`controller ${opponent ? 'opponent' : ''}`}>{item.controller}</span>
         </div>

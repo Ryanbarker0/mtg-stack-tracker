@@ -120,8 +120,9 @@ export function explain(item: StackItem, stack: StackItem[]): Insight {
   } else if (kind === 'spell' && item.kind === 'copy') {
     onResolve = 'Becomes a token on the battlefield.'
   } else if (kind === 'spell') {
-    onResolve =
-      'Enters the battlefield if it is a permanent, or does what it says if it is an instant or sorcery.'
+    onResolve = /\b(Instant|Sorcery)\b/.test(item.text)
+      ? 'Does what it says.'
+      : 'Enters the battlefield. Its abilities only matter once it is there.'
   }
 
   return { what, why, onResolve }

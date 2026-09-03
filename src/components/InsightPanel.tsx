@@ -66,7 +66,9 @@ export function InsightPanel({ item, stack, onClose }: Props) {
           )}
 
           <div>
-            <h3>Card text</h3>
+            <h3>
+              {item.kind === 'spell' || item.originalKind === 'spell' ? 'Spell' : 'Ability text'}
+            </h3>
             <p className="oracle muted">{item.text}</p>
           </div>
         </div>

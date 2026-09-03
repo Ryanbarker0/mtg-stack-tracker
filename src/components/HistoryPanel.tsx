@@ -56,7 +56,13 @@ export function HistoryPanel({ history, onClear }: Props) {
         {[...history].reverse().map((entry, index) => (
           <div key={`${entry.item.id}-${index}`} className="history-item">
             <span className={`outcome ${entry.outcome}`}>{entry.outcome}</span>
-            <span className={`kind-${entry.item.kind}`}>{entry.item.kind}</span>
+            <span
+              className={`kind-${entry.item.kind === 'copy' ? (entry.item.originalKind ?? 'spell') : entry.item.kind}`}
+            >
+              {entry.item.kind === 'copy'
+                ? `copy of ${entry.item.originalKind ?? 'spell'}`
+                : entry.item.kind}
+            </span>
             <span>{entry.item.title}</span>
             {entry.item.controller !== 'You' && (
               <span className="faint">({entry.item.controller})</span>
