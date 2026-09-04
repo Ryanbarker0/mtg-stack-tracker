@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { castTriggers, entersTriggers, isPermanentSpell, qualifierMatches } from './triggers'
+import {
+  castTriggers,
+  castsExiledCard,
+  entersTriggers,
+  isPermanentSpell,
+  qualifierMatches,
+} from './triggers'
 import type { BattlefieldPermanent, Card } from './types'
 
 /** Real oracle text from Scryfall, fetched 2026-09-03. */
@@ -271,5 +277,85 @@ describe('isPermanentSpell', () => {
     expect(isPermanentSpell(kozilek.faces[0])).toBe(true)
     expect(isPermanentSpell(counterspell.faces[0])).toBe(false)
     expect(isPermanentSpell(echoes.faces[0])).toBe(true)
+  })
+})
+
+describe('dinosaur deck shapes', () => {
+  const dino = (name: string, text: string, power: string, toughness: string, mv = 4): Card => ({
+    ...card(name, 'Creature — Dinosaur', text, ['G'], mv),
+    power,
+    toughness,
+  })
+  const pantlaza = dino(
+    'Pantlaza, Sun-Favored',
+    "Whenever Pantlaza or another Dinosaur you control enters, you may discover X, where X is that creature's toughness. Do this only once each turn. (Exile cards from the top of your library until you exile a nonland card with that mana value or less. Cast it without paying its mana cost or put it into your hand. Put the rest on the bottom in a random order.)",
+    '4',
+    '4',
+  )
+  const raptor = dino(
+    'Marauding Raptor',
+    'Creature spells you cast cost {1} less to cast.\nWhenever another creature you control enters, this creature deals 2 damage to it. If a Dinosaur is dealt damage this way, this creature gets +2/+0 until end of turn.',
+    '2',
+    '3',
+  )
+  const tyrant = dino(
+    'Vaultborn Tyrant',
+    "Trample\nWhenever this creature or another creature you control with power 4 or greater enters, you gain 3 life and draw a card.\nWhen this creature dies, if it's not a token, create a token that's a copy of it, except it's an artifact in addition to its other types.",
+    '6',
+    '6',
+    7,
+  )
+  const stomper = dino(
+    'Topiary Stomper',
+    "Vigilance\nWhen this creature enters, search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nThis creature can't attack or block unless you control seven or more lands.",
+    '4',
+    '4',
+  )
+  const commanderIds = new Set([pantlaza.oracleId])
+
+  it('offers Pantlaza for another Dinosaur entering, with the once-each-turn note, and Raptor for any other creature', () => {
+    const entering = onField(stomper)
+    const result = entersTriggers(
+      entering,
+      [onField(pantlaza), onField(raptor), entering],
+      commanderIds,
+    )
+    expect(result.map((s) => [s.source.name, s.certain, s.note !== undefined])).toEqual([
+      ['Topiary Stomper', true, false],
+      ['Marauding Raptor', true, false],
+      ['Pantlaza, Sun-Favored', true, true],
+    ])
+    expect(result[2].fromCommander).toBe(true)
+    expect(castsExiledCard(result[2].ability.text)).toBe(true)
+  })
+
+  it('offers Pantlaza for itself entering, but not Marauding Raptor for itself', () => {
+    const p = onField(pantlaza)
+    expect(entersTriggers(p, [onField(raptor), p], commanderIds).map((s) => s.source.name)).toEqual(
+      ['Marauding Raptor', 'Pantlaza, Sun-Favored'],
+    )
+    const r = onField(raptor)
+    expect(entersTriggers(r, [r], commanderIds)).toEqual([])
+  })
+
+  it('evaluates power clauses against printed power', () => {
+    const big = onField(tyrant)
+    const small = onField(raptor)
+    expect(entersTriggers(big, [big], commanderIds).map((s) => s.source.name)).toEqual([
+      'Vaultborn Tyrant',
+    ])
+    expect(entersTriggers(small, [onField(tyrant), small], commanderIds)).toEqual([])
+    const stomperIn = onField(stomper)
+    expect(
+      entersTriggers(stomperIn, [onField(tyrant), stomperIn], commanderIds).map(
+        (s) => s.source.name,
+      ),
+    ).toEqual(['Topiary Stomper', 'Vaultborn Tyrant'])
+  })
+
+  it('treats discover like cascade for casting the exiled card', () => {
+    expect(castsExiledCard('When this creature enters, discover 5.')).toBe(true)
+    expect(castsExiledCard('Cascade. Exile cards...')).toBe(true)
+    expect(castsExiledCard('When this creature enters, draw a card.')).toBe(false)
   })
 })

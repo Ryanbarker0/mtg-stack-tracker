@@ -62,6 +62,12 @@ function withNotes(suggestion: Suggestion): Suggestion {
       note: 'Sacrifices itself, so only the first of these to resolve does anything. The rest fizzle.',
     }
   }
+  if (ONCE_EACH_TURN.test(suggestion.ability.text)) {
+    return {
+      ...suggestion,
+      note: 'Once each turn. It still triggers every time, but if it has already happened this turn, this one does nothing.',
+    }
+  }
   return suggestion
 }
 
@@ -79,8 +85,17 @@ const OWN_CAST_PATTERN = /^when you cast this spell\b/i
 const OWN_CAST_CONDITION = /^when you cast this spell, if\b/i
 /** "Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade."" */
 const GRANTED_CASCADE_PATTERN = /^(.*?)\bspells? you cast\b(.*?) have "((?:cascade[,.]?\s*)+)"/i
+/**
+ * "Whenever a[n] X [you control] [with ...] enters". Group 1 is the type qualifier, group 2
+ * any "with ..." clause (power, mana value), group 3 the rest of the sentence.
+ */
 const ENTERS_PATTERN =
-  /\bwhenever (?:a|an|another|one or more) ([a-z][a-z\- ]*?) (?:you control )?enters?\b(?:\s+(?:the battlefield\s+)?under your control)?(.*)$/i
+  /\bwhenever (?:a|an|another|one or more) ([a-z][a-z\- ]*?)(?: you control)?((?: with [^,.]*?)?) enters?\b(?:\s+(?:the battlefield\s+)?under your control)?(.*)$/i
+/** "Whenever Pantlaza or another Dinosaur you control enters": the source itself counts too. */
+const SELF_OR_ANOTHER_ENTERS_PATTERN =
+  /\bwhenever (?:this (?:creature|permanent|artifact|enchantment)|[A-Z][\w',\- ]*?) or another ([a-z][a-z\- ]*?)(?: you control)?((?: with [^,.]*?)?) enters?\b(.*)$/i
+const ONCE_EACH_TURN =
+  /\b(do this|this ability triggers|triggers) only once each turn\b|\bonly once each turn\b/i
 const OWN_ENTERS_PATTERN = /^when (?:this|[^,]+?) enters\b/i
 const DOUBLER_PATTERN = /triggers an additional time/i
 
@@ -181,6 +196,11 @@ const MANA_VALUE_CLAUSES: Array<[RegExp, (m: RegExpExecArray, value: number) => 
   [/\bwith mana value (\d+)\b/i, (m, v) => v === Number(m[1])],
 ]
 
+const POWER_CLAUSES: Array<[RegExp, (m: RegExpExecArray, value: number) => boolean]> = [
+  [/\bwith power (\d+) or greater\b/i, (m, v) => v >= Number(m[1])],
+  [/\bwith power (\d+) or less\b/i, (m, v) => v <= Number(m[1])],
+]
+
 function evaluateTrailing(rest: string, subject: Subject): Evaluation {
   // An intervening "if" right after the trigger condition is for the user to judge.
   const ifClause = /^\s*,\s*(if\b[^,]+)/i.exec(rest)
@@ -200,6 +220,21 @@ function evaluateTrailing(rest: string, subject: Subject): Evaluation {
       result = undefined
       reasons.push('mana value unknown, re-import the deck')
     } else if (!test(match, subject.card.manaValue)) {
+      return { result: false }
+    }
+    break
+  }
+
+  // Power clauses, for "creature you control with power 4 or greater enters".
+  for (const [pattern, test] of POWER_CLAUSES) {
+    const match = pattern.exec(text)
+    if (!match) continue
+    text = text.replace(match[0], '').trim()
+    const power = Number.parseInt(subject.card.power ?? '', 10)
+    if (Number.isNaN(power)) {
+      result = undefined
+      reasons.push(`power ${match[0].replace(/^with power /i, '')}`)
+    } else if (!test(match, power)) {
       return { result: false }
     }
     break
@@ -397,6 +432,7 @@ export function entersTriggers(
 
   for (const ability of triggeredAbilities(permanent.card, permanent.faceIndex)) {
     if (!OWN_ENTERS_PATTERN.test(ability.text)) continue
+    if (SELF_OR_ANOTHER_ENTERS_PATTERN.test(ability.text)) continue
     const condition = interveningIf(ability.text)
     suggestions.push({
       source: permanent.card,
@@ -412,11 +448,28 @@ export function entersTriggers(
 
   for (const watcher of battlefield) {
     for (const ability of triggeredAbilities(watcher.card, watcher.faceIndex)) {
-      const match = ENTERS_PATTERN.exec(ability.text.replace(/\s*\([^)]*\)/g, ''))
+      const clean = ability.text.replace(/\s*\([^)]*\)/g, '')
+      const match = ENTERS_PATTERN.exec(clean) ?? SELF_OR_ANOTHER_ENTERS_PATTERN.exec(clean)
       if (!match) continue
-      // "another" excludes the entering permanent itself.
-      if (/\bwhenever another\b/i.test(ability.text) && watcher.id === permanent.id) continue
-      const evaluation = combine(qualifierMatches(match[1], subject), match[2], subject)
+      const isSelf = watcher.id === permanent.id
+      const selfOrAnother = SELF_OR_ANOTHER_ENTERS_PATTERN.test(clean)
+      // "Whenever another creature enters" excludes the entering permanent itself, but
+      // "Whenever this creature or another Dinosaur enters" includes it.
+      if (/\bwhenever another\b/i.test(clean) && isSelf) continue
+      // The source entering on its own satisfies "this creature or another ..." regardless of type.
+      if (selfOrAnother && isSelf) {
+        suggestions.push({
+          source: watcher.card,
+          sourceFaceIndex: watcher.faceIndex,
+          ability,
+          certain: true,
+          ...doublersFor(watcher.card, battlefield),
+          fromCommander: commanderIds.has(watcher.card.oracleId),
+          copiesSpell: false,
+        })
+        continue
+      }
+      const evaluation = combine(qualifierMatches(match[1], subject), match[2] + match[3], subject)
       if (evaluation.result === false) continue
       suggestions.push({
         source: watcher.card,
@@ -445,9 +498,9 @@ function orderForStack(suggestions: Suggestion[]): Suggestion[] {
     .sort((a, b) => Number(a.fromCommander) - Number(b.fromCommander))
 }
 
-/** True for a cascade trigger, whose resolution may cast the exiled card. */
-export function isCascade(text: string): boolean {
-  return /^cascade\b/i.test(text)
+/** True for a trigger whose resolution exiles cards and may cast one for free: cascade or discover. */
+export function castsExiledCard(text: string): boolean {
+  return /^cascade\b/i.test(text) || /\bdiscover (\d+|x)\b/i.test(text)
 }
 
 /** Whether a resolving spell becomes a permanent (CR 608.3). */

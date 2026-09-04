@@ -170,6 +170,22 @@ describe('extractAbilities and usesStack', () => {
       ]),
     ).toEqual(['instant', 'sorcery'])
     expect(castTriggerTypes([card('Flying')])).toEqual([])
+    expect(
+      castTriggerTypes([
+        card(
+          "Whenever Pantlaza or another Dinosaur you control enters, you may discover X, where X is that creature's toughness. Do this only once each turn.",
+          'Legendary Creature — Dinosaur',
+        ),
+      ]),
+    ).toEqual(['Dinosaur'])
+    expect(
+      castTriggerTypes([
+        card(
+          'Whenever another creature you control enters, draw a card.',
+          'Legendary Creature — Human',
+        ),
+      ]),
+    ).toEqual([])
   })
 
   it('ticks cards of a watched type even without stack abilities, but never lands', () => {

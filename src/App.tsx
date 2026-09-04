@@ -14,7 +14,7 @@ import { itemForAbility, itemForSpell } from './lib/stackItems'
 import {
   castTriggers,
   entersTriggers,
-  isCascade,
+  castsExiledCard,
   type CastFrom,
   type Suggestion,
 } from './lib/triggers'
@@ -90,7 +90,7 @@ export default function App() {
       Array.from({ length: s.times }, () => ({
         ...itemForAbility(s.source, s.ability),
         ...(s.copiesSpell && spellId ? { onResolve: 'copySpell' as const, refersTo: spellId } : {}),
-        ...(isCascade(s.ability.text) ? { onResolve: 'cascade' as const } : {}),
+        ...(castsExiledCard(s.ability.text) ? { onResolve: 'cascade' as const } : {}),
         origin: [
           event,
           ...(s.grantedBy ? [`Granted by ${s.grantedBy}`] : []),
@@ -371,8 +371,8 @@ export default function App() {
 
       {pickingHit && decks.activeDeck && (
         <DeckPicker
-          title="Cascade hit"
-          subtitle="Pick the nonland card you exiled. It is cast from exile, so Zhulodok's cascade does not apply to it."
+          title="Cast the exiled card"
+          subtitle="Pick the card you exiled and are casting. It is cast from exile, not your hand."
           deck={decks.activeDeck}
           onPick={(card) => {
             setPickingHit(false)

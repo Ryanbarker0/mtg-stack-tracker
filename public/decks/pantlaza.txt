@@ -1,0 +1,97 @@
+Commander
+1x Pantlaza, Sun-Favored (lcc) 4
+
+Deck
+1x Akroma's Will (m3c) 165
+1x Ancient Imperiosaur (mom) 174
+1x Apex Altisaur (lcc) 232
+1x Arcane Signet (msc) 192
+1x Birds of Paradise (msc) 170
+1x Bonehoard Dracosaur (lci) 134
+1x Bountiful Promenade (msc) 226
+1x Canopy Vista (msc) 227
+1x Chandra's Ignition (m3c) 209
+1x Chaos Warp (msc) 164
+1x Cinder Glade (msc) 230
+1x Clifftop Retreat (msc) 231
+1x Command Tower (msc) 236
+1x Craterhoof Behemoth (tdm) 138
+1x Cultivate (msc) 172
+1x Curator of Sun's Creation (lci) 141
+1x Curious Altisaur (lcc) 90
+1x Defense of the Heart (plst) ULG-100
+1x Drover of the Mighty (j25) 650
+1x Earthshaker Dreadmaw (lci) 183
+1x Ephemerate (h1r) 1
+1x Etali, Primal Conqueror // Etali, Primal Sickness (mom) 137
+1x Etali, Primal Storm (fdn) 194
+1x Exotic Orchard (msc) 241
+1x Farseek (msc) 815
+1x Finale of Devastation (cmm) 289
+1x Furycalm Snarl (msc) 247
+1x Game Trail (fic) 398
+1x Garruk's Uprising (ecc) 109
+1x Generous Gift (msc) 133
+1x Ghalta and Mavren (mom) 225
+1x Ghalta, Stampede Tyrant (lci) 185
+1x Heroic Intervention (pip) 202
+1x Hulking Raptor (lci) 191
+1x Itzquinth, Firstborn of Gishath (lci) 230
+1x Jetmir's Garden (snc) 250
+1x Kessig Wolf Run (tdc) 375
+1x Looming Altisaur (plst) XLN-23
+1x Lurking Predators (plst) M10-190
+1x Marauding Raptor (lcc) 228
+1x Monster Manual // Zoological Study (clb) 242
+1x Mosswort Bridge (tdc) 379
+1x Nature's Lore (msc) 177
+1x Otepec Huntmaster (lcc) 229
+1x Path of Ancestry (msc) 254
+1x Path to Exile (msc) 141
+1x Polyraptor (rix) 144
+1x Progenitor's Icon (msc) 208
+1x Pugnacious Hammerskull (lci) 208
+1x Quartzwood Crasher (lcc) 281
+1x Rampant Growth (fic) 313
+1x Ranging Raptors (lcc) 249
+1x Regal Imperiosaur (dft) 177
+1x Regisaur Alpha (lcc) 286
+1x Restless Ridgeline (lci) 283
+1x Return of the Wildspeaker (ecc) 115
+1x Rhythm of the Wild (rvr) 380
+1x Ripjaw Raptor (lcc) 253
+1x Rishkar's Expertise (m3c) 411
+1x Rockfall Vale (tdc) 387
+1x Rogue's Passage (hoc) 212
+1x Runic Armasaur (lcc) 256
+1x Sacred Foundry (trk) 295
+1x Secluded Courtyard (msc) 265
+1x Skyshroud Claim (eoc) 107
+1x Sneak Attack (dmr) 139
+1x Sol Ring (msc) 212
+1x Spectator Seating (msc) 268
+1x Spire Garden (tmc) 75
+1x Stomping Ground (trk) 299
+1x Sunfrill Imitator (lcc) 94
+1x Swords to Plowshares (msc) 143
+1x Temple Garden (trk) 301
+1x The Great Henge (cmm) 294
+1x Thrashing Brontodon (j25) 725
+1x Three Visits (msc) 181
+1x Topiary Stomper (j25) 730
+1x Trumpeting Carnosaur (lci) 171
+1x Unclaimed Territory (msc) 275
+1x Urza's Incubator (mh3) 297
+1x Vaultborn Tyrant (big) 20
+1x Vivien, Champion of the Wilds (clb) 838
+1x Wayward Swordtooth (lcc) 263
+1x Winding Canyons (wth) 167
+1x Windswept Heath (mh3) 235
+1x Wooded Foothills (mh3) 236
+1x Worldly Tutor (dmr) 185
+1x Wrathful Raptors (lcc) 88
+1x Xenagos, God of Revels (lcc) 295
+1x Yavimaya, Cradle of Growth (m3c) 409
+2x Mountain (trk) 324
+2x Plains (trk) 317
+5x Forest (trk) 325

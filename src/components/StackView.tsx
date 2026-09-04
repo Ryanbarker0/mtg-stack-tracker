@@ -211,7 +211,9 @@ function StackRow({
         )}
         {isTop && item.onResolve === 'cascade' && (
           <div className="effect kind-triggered">
-            Exile until a nonland card with lesser mana value. Cast it for free, or not.
+            {/^cascade/i.test(item.text)
+              ? 'Exile until a nonland card with lesser mana value. Cast it for free, or not.'
+              : 'Discover: exile until a nonland card of that mana value or less. Cast it for free or put it in your hand.'}
           </div>
         )}
         {isTop && sacrificesSource(item) && (

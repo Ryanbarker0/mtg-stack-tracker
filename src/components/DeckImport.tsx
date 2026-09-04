@@ -220,9 +220,8 @@ export function DeckImport({ onSave, onCancel, onShowCard }: Props) {
           </p>
           {step.watchedTypes.length > 0 && (
             <div className="notice">
-              Your commander triggers when you cast{' '}
-              <strong>{step.watchedTypes.join(' or ')}</strong> spells, so every card of that type
-              is ticked too.
+              Your commander cares about <strong>{step.watchedTypes.join(' or ')}</strong> cards, so
+              every card of that type is ticked too.
             </div>
           )}
           <ReviewSummary entries={step.entries} />

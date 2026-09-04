@@ -201,11 +201,10 @@ export function isInstantOrSorcery(card: Card): boolean {
 }
 
 /**
- * Spell types a commander cares about being cast, read from its own oracle text.
- *
- * "Whenever you cast an Eldrazi spell" yields ["Eldrazi"]; "Whenever you cast an instant
- * or sorcery spell" yields ["instant", "sorcery"]. Only words that can appear on a type
- * line are useful here; a qualifier such as "colorless" is returned but will match nothing.
+ * Types a commander cares about, read from its own oracle text: what it watches you cast
+ * ("Whenever you cast an Eldrazi spell") or watches enter ("Whenever Pantlaza or another
+ * Dinosaur you control enters"). Only words that can appear on a type line are useful
+ * here; a qualifier such as "colorless" is returned but will match nothing.
  */
 export function castTriggerTypes(commanders: Card[]): string[] {
   const types = new Set<string>()
@@ -213,12 +212,22 @@ export function castTriggerTypes(commanders: Card[]): string[] {
     for (const ability of extractAbilities(card)) {
       if (ability.kind !== 'triggered') continue
       const text = ability.text.replace(/\s*\([^)]*\)/g, '')
-      for (const match of text.matchAll(
+      const patterns = [
         /\byou cast (?:a|an|your first|another|one or more) ([A-Za-z][A-Za-z\- ]*?) spells?\b/gi,
-      )) {
-        for (const word of match[1].split(/\s*(?:,|\bor\b)\s*/)) {
-          const cleaned = word.trim()
-          if (cleaned !== '') types.add(cleaned)
+        /\bwhenever (?:[A-Za-z][\w',\- ]*? or )?(?:a|an|another|one or more) ([A-Za-z][A-Za-z\- ]*?) (?:you control )?enters?\b/gi,
+      ]
+      for (const pattern of patterns) {
+        for (const match of text.matchAll(pattern)) {
+          for (const word of match[1].split(/\s*(?:,|\bor\b)\s*/)) {
+            const cleaned = word.trim()
+            // Generic words name no type worth ticking a whole deck for.
+            if (
+              cleaned !== '' &&
+              !/^(creature|permanent|spell|nontoken creature|token)$/i.test(cleaned)
+            ) {
+              types.add(cleaned)
+            }
+          }
         }
       }
     }

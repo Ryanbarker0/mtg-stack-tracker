@@ -21,6 +21,8 @@ interface ScryfallImageUris {
 interface ScryfallFace {
   name: string
   colors?: string[]
+  power?: string
+  toughness?: string
   mana_cost?: string
   type_line?: string
   oracle_text?: string
@@ -38,6 +40,8 @@ export interface ScryfallCard {
   keywords?: string[]
   colors?: string[]
   cmc?: number
+  power?: string
+  toughness?: string
   image_uris?: ScryfallImageUris
   card_faces?: ScryfallFace[]
   scryfall_uri: string
@@ -118,6 +122,8 @@ export function toCard(source: ScryfallCard): Card {
     keywords: source.keywords ?? [],
     colors: source.colors ?? unionColors(source.card_faces),
     manaValue: source.cmc,
+    power: source.power ?? source.card_faces?.[0]?.power,
+    toughness: source.toughness ?? source.card_faces?.[0]?.toughness,
     faces,
     scryfallUri: source.scryfall_uri,
   }

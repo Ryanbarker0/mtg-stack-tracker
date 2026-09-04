@@ -29,6 +29,9 @@ export interface Card {
   colors?: string[]
   /** Mana value (Scryfall cmc). Missing on decks imported before it was stored. */
   manaValue?: number
+  /** Printed power and toughness for creatures, as Scryfall gives them ("4", "*", "1+*"). */
+  power?: string
+  toughness?: string
   faces: CardFace[]
   scryfallUri: string
   /** Rulings text pulled from Scryfall, fetched lazily. */
