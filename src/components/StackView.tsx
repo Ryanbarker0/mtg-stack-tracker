@@ -267,10 +267,17 @@ function StackRow({
               onClick={onCascadeHit}
               title="Resolve and cast the exiled card"
             >
-              Cast the hit
+              {/^cascade/i.test(item.text) ? 'Cast the hit' : 'Cast it'}
             </button>
-            <button onClick={onResolveTop} title="Resolve without casting anything">
-              No cast
+            <button
+              onClick={onResolveTop}
+              title={
+                /^cascade/i.test(item.text)
+                  ? 'Resolve without casting anything'
+                  : 'Resolve and put the exiled card into your hand instead'
+              }
+            >
+              {/^cascade/i.test(item.text) ? 'No cast' : 'To hand'}
             </button>
           </>
         ) : isTop && sacrificesSource(item) ? (
