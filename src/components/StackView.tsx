@@ -188,7 +188,15 @@ function StackRow({
           <span className={`controller ${opponent ? 'opponent' : ''}`}>{item.controller}</span>
         </div>
         <div className="item-title">{item.title}</div>
-        {item.text && <div className={`item-text ${expanded ? 'expanded' : ''}`}>{item.text}</div>}
+        {item.text && (
+          // Keyed on the expanded state so Safari lays the clamped text out afresh on collapse.
+          <div
+            key={expanded ? 'expanded' : 'clamped'}
+            className={`item-text ${expanded ? 'expanded' : ''}`}
+          >
+            {item.text}
+          </div>
+        )}
         {item.origin && item.origin.length > 0 && (
           <div className={`origin ${expanded ? 'expanded' : ''}`} title={item.origin.join(' → ')}>
             ↳ {item.origin.join(' → ')}

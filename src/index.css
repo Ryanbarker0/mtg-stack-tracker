@@ -508,16 +508,20 @@ a {
 .stack-item .item-text {
   color: var(--text-muted);
   font-size: 14px;
+  line-height: 1.4;
   white-space: pre-line;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  /* Safari does not always shrink the box after line-clamp is re-applied; cap it explicitly. */
+  max-height: calc(1.4em * 3);
 }
 
 .stack-item .item-text.expanded {
   display: block;
   -webkit-line-clamp: unset;
+  max-height: none;
 }
 
 .stack-item .note {
