@@ -17,14 +17,19 @@ export function Caveats({ open = false }: { open?: boolean }) {
           <ul>
             <li>Card text, types, colours and mana values, all straight from Scryfall.</li>
             <li>
-              Which of your permanents trigger when you cast a spell or a permanent enters, for the
-              two wordings it reads: “whenever you cast a[n] X spell” and “whenever a[n] X enters”,
-              plus granted cascade.
+              Which of your permanents trigger when you cast a spell, a permanent enters, or a
+              permanent is blinked, for the wordings it reads: “whenever you cast a[n] X spell”,
+              “whenever a[n] X enters”, “when this leaves the battlefield”, plus granted cascade.
             </li>
             <li>
               Copies: what a copy-all trigger copies, that copies are not cast, that copied
               permanent spells become tokens, and that a doubler applies to triggers but not to
               copies.
+            </li>
+            <li>
+              Doublers: Echoes of Eternity doubles colorless sources; Panharmonicon only doubles
+              what an artifact or creature entering caused. A blinked permanent comes back as a new
+              object that was not cast, and a blinked token does not come back.
             </li>
             <li>Mana value conditions, which are checked against the card’s printed cost.</li>
           </ul>

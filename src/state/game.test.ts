@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { YOU, emptyGame, gameReducer, resolvableWithoutDecision, type GameAction } from './game'
+import {
+  YOU,
+  emptyGame,
+  entryOfResolved,
+  gameReducer,
+  resolvableWithoutDecision,
+  type GameAction,
+} from './game'
 import { itemForSpell } from '../lib/stackItems'
 import type { Card, GameState, StackItem } from '../lib/types'
 
@@ -369,5 +376,58 @@ describe('gameReducer', () => {
       push('Monument trigger', YOU, 'triggered'),
     )
     expect(resolvableWithoutDecision(state, new Set())).toBe(1)
+  })
+})
+
+describe('effects that put something onto the battlefield', () => {
+  it('stops an automatic run before a blink, so the user can say what came back', () => {
+    const state = run(
+      push('Monument trigger', YOU, 'triggered'),
+      {
+        type: 'push',
+        item: {
+          kind: 'spell',
+          controller: YOU,
+          title: 'Cloudshift',
+          text: 'Exile target creature you control, then return that card to the battlefield under your control.',
+        },
+      },
+      push('Draw a card', YOU, 'triggered'),
+    )
+    expect(resolvableWithoutDecision(state, new Set())).toBe(1)
+  })
+
+  it('knows a resolved spell was cast and a resolved copy was not', () => {
+    const spell: StackItem = {
+      id: 's',
+      kind: 'spell',
+      controller: YOU,
+      title: 'Spirited Companion',
+      text: 'Enchantment Creature — Dog',
+      createdAt: 0,
+    }
+    expect(entryOfResolved(spell)).toBe('cast')
+    expect(entryOfResolved({ ...spell, kind: 'copy', originalKind: 'spell' })).toBe('notCast')
+  })
+
+  it('adds a permanent to the battlefield under a caller-supplied id', () => {
+    const card: Card = {
+      scryfallId: 'c',
+      oracleId: 'c',
+      name: 'Spirited Companion',
+      typeLine: 'Enchantment Creature — Dog',
+      keywords: [],
+      faces: [
+        {
+          name: 'Spirited Companion',
+          manaCost: '{1}{W}',
+          typeLine: 'Enchantment Creature — Dog',
+          oracleText: 'When this creature enters, draw a card.',
+        },
+      ],
+      scryfallUri: 'https://scryfall.com/card/x/1/c',
+    }
+    const state = run({ type: 'battlefieldAdd', card, isToken: true, id: 'token-1' })
+    expect(state.battlefield).toEqual([{ id: 'token-1', card, faceIndex: 0, isToken: true }])
   })
 })

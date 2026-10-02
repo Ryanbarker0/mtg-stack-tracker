@@ -7,24 +7,48 @@ interface Props {
   title: string
   subtitle: string
   deck: Deck
+  /** Lands are left out by default: a cascade hit is never a land. */
+  includeLands?: boolean
+  /** Only cards with this type on a face, e.g. "creature" for what Dack Fayden reveals; "permanent" means any nonland permanent or land. */
+  typeFilter?: string
+  /** Text to start the filter with, e.g. the name of the creature a token copies. */
+  initialFilter?: string
+  cancelLabel?: string
   onPick: (card: Card) => void
   onCancel: () => void
 }
 
 /**
- * Picks any nonland card from the whole deck, not just the palette. Used for cascade
- * hits, which can be anything in the library.
+ * Picks any card from the whole deck, not just the palette. Used for cascade hits, which
+ * can be anything in the library, and for cards an effect put onto the battlefield.
  */
-export function DeckPicker({ title, subtitle, deck, onPick, onCancel }: Props) {
-  const [filter, setFilter] = useState('')
+export function DeckPicker({
+  title,
+  subtitle,
+  deck,
+  includeLands = false,
+  typeFilter,
+  initialFilter = '',
+  cancelLabel = 'Nothing cast',
+  onPick,
+  onCancel,
+}: Props) {
+  const [filter, setFilter] = useState(initialFilter)
   const cards = useMemo(() => {
     const needle = normaliseText(filter)
+    const hasType = (c: Card) => {
+      if (!typeFilter) return true
+      if (typeFilter === 'permanent')
+        return c.faces.some((f) => !/\b(Instant|Sorcery)\b/.test(f.typeLine))
+      return c.faces.some((f) => new RegExp(`\\b${typeFilter}\\b`, 'i').test(f.typeLine))
+    }
     return deck.entries
       .map((e) => e.card)
-      .filter((c) => c.faces.some((f) => !isLand(f)))
+      .filter((c) => includeLands || c.faces.some((f) => !isLand(f)))
+      .filter(hasType)
       .filter((c) => needle === '' || normaliseText(c.name).includes(needle))
       .sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name))
-  }, [deck, filter])
+  }, [deck, filter, includeLands, typeFilter])
 
   return (
     <div className="modal-backdrop" onClick={onCancel} role="presentation">
@@ -72,7 +96,7 @@ export function DeckPicker({ title, subtitle, deck, onPick, onCancel }: Props) {
           </div>
           <div className="row">
             <button className="ghost" onClick={onCancel}>
-              Nothing cast
+              {cancelLabel}
             </button>
           </div>
         </div>

@@ -1,4 +1,10 @@
-import { entersTriggers, isPermanentSpell, sacrificesItself } from '../lib/triggers'
+import {
+  entersTriggers,
+  entryEffect,
+  isPermanentSpell,
+  sacrificesItself,
+  type Entry,
+} from '../lib/triggers'
 import type { BattlefieldPermanent, Card, GameState, StackItem } from '../lib/types'
 
 /**
@@ -29,7 +35,7 @@ export type GameAction =
   | { type: 'resolveTopCopyingOthers'; controller: string }
   | { type: 'resolveTopSacrificingSource' }
   | { type: 'setNote'; id: string; note: string }
-  | { type: 'battlefieldAdd'; card: Card; faceIndex?: number; isToken?: boolean }
+  | { type: 'battlefieldAdd'; card: Card; faceIndex?: number; isToken?: boolean; id?: string }
   | { type: 'battlefieldRemove'; id: string }
   | { type: 'clearStack' }
   | { type: 'clearHistory' }
@@ -54,9 +60,10 @@ export function copiesAllOthers(item: StackItem): boolean {
 
 /**
  * How many items from the top can resolve with no decision from the player. Stops before
- * an item that needs a choice (a copy-all trigger, a self-sacrifice trigger, a cascade),
- * an opponent's item, or a permanent whose entering would trigger something. A permanent
- * that enters quietly is included and moves to the battlefield as normal.
+ * an item that needs a choice (a copy-all trigger, a self-sacrifice trigger, a cascade, an
+ * effect that puts something onto the battlefield), an opponent's item, or a permanent
+ * whose entering would trigger something. A permanent that enters quietly is included and
+ * moves to the battlefield as normal.
  */
 export function resolvableWithoutDecision(state: GameState, commanderIds: Set<string>): number {
   let current = state
@@ -65,9 +72,15 @@ export function resolvableWithoutDecision(state: GameState, commanderIds: Set<st
     const top = current.stack[current.stack.length - 1]
     if (top.controller !== YOU) break
     if (copiesAllOthers(top) || sacrificesSource(top) || top.onResolve === 'cascade') break
+    if (entryEffect(top.text)) break
     const entering = permanentFromResolved(top)
     if (entering) {
-      const suggestions = entersTriggers(entering, [...current.battlefield, entering], commanderIds)
+      const suggestions = entersTriggers(
+        entering,
+        [...current.battlefield, entering],
+        commanderIds,
+        entryOfResolved(top),
+      )
       if (suggestions.length > 0) break
     }
     current = gameReducer(current, { type: 'resolveTop' })
@@ -94,8 +107,18 @@ export function siblingsOf(stack: StackItem[], item: StackItem): StackItem[] {
   )
 }
 
-function makePermanent(card: Card, faceIndex = 0, isToken = false): BattlefieldPermanent {
-  return { id: newId(), card, faceIndex, isToken }
+function makePermanent(
+  card: Card,
+  faceIndex = 0,
+  isToken = false,
+  id = newId(),
+): BattlefieldPermanent {
+  return { id, card, faceIndex, isToken }
+}
+
+/** A resolved spell was cast; a resolved copy of one was not (CR 707.10), it becomes a token. */
+export function entryOfResolved(item: StackItem): Entry {
+  return item.kind === 'copy' ? 'notCast' : 'cast'
 }
 
 /** The permanent a resolving stack item becomes, if any. */
@@ -223,7 +246,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         battlefield: [
           ...state.battlefield,
-          makePermanent(action.card, action.faceIndex ?? 0, action.isToken ?? false),
+          makePermanent(action.card, action.faceIndex ?? 0, action.isToken ?? false, action.id),
         ],
       }
     case 'battlefieldRemove':

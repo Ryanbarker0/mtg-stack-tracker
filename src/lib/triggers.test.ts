@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blinkTriggers,
   castTriggers,
   castsExiledCard,
   entersTriggers,
+  entryEffect,
   isPermanentSpell,
   qualifierMatches,
+  type Suggestion,
 } from './triggers'
 import type { BattlefieldPermanent, Card } from './types'
 
@@ -357,5 +360,210 @@ describe('dinosaur deck shapes', () => {
     expect(castsExiledCard('When this creature enters, discover 5.')).toBe(true)
     expect(castsExiledCard('Cascade. Exile cards...')).toBe(true)
     expect(castsExiledCard('When this creature enters, draw a card.')).toBe(false)
+  })
+})
+
+describe('blink deck shapes', () => {
+  /** Real oracle text from Scryfall, fetched 2026-10-01. */
+  const panharmonicon = card(
+    'Panharmonicon',
+    'Artifact',
+    'If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.',
+  )
+  const preston = card(
+    'Preston, the Vanisher',
+    'Legendary Creature — Rabbit Wizard',
+    "Whenever another nontoken creature you control enters, if it wasn't cast, create a token that's a copy of that creature, except it's a 0/1 white Illusion.\n{1}{W}, Sacrifice five Illusions: Exile target nonland permanent.",
+    ['W'],
+    4,
+  )
+  const tocasia = card(
+    "Tocasia's Welcome",
+    'Enchantment',
+    'Whenever one or more creatures you control with mana value 3 or less enter, draw a card. This ability triggers only once each turn.',
+    ['W'],
+    3,
+  )
+  const sunTitan = card(
+    'Sun Titan',
+    'Creature — Giant',
+    'Vigilance\nWhenever this creature enters or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.',
+    ['W'],
+    6,
+  )
+  const duplicant = card(
+    'Duplicant',
+    'Artifact Creature — Shapeshifter',
+    "Imprint — When this creature enters, you may exile target nontoken creature.\nAs long as a card exiled with this creature is a creature card, this creature has the power, toughness, and creature types of the last creature card exiled with it. It's still a Shapeshifter.",
+    [],
+    6,
+  )
+  const companion = card(
+    'Spirited Companion',
+    'Enchantment Creature — Dog',
+    'When this creature enters, draw a card.',
+    ['W'],
+    2,
+  )
+  const court = card(
+    'Court of Grace',
+    'Enchantment',
+    "When this enchantment enters, you become the monarch.\nAt the beginning of your upkeep, create a 1/1 white Spirit creature token with flying. If you're the monarch, create a 4/4 white Angel creature token with flying instead.",
+    ['W'],
+    4,
+  )
+  const fountain = card(
+    'Radiant Fountain',
+    'Land',
+    'When this land enters, you gain 2 life.\n{T}: Add {C}.',
+    [],
+    0,
+  )
+  const apparition = card(
+    'Skyclave Apparition',
+    'Creature — Kor Spirit',
+    "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.\nWhen this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.",
+    ['W'],
+    3,
+  )
+  const dack = card(
+    'Dack Fayden, Helping Hand',
+    'Legendary Creature — Human Advisor',
+    "When Dack Fayden enters, reveal cards from the top of your library until you reveal X creature cards, where X is the number of opponents you have. Put those creature cards onto the battlefield, then shuffle. They're goaded for the rest of the game. For each of those permanents, choose a different opponent. Each opponent gains control of the permanent for which they were chosen.",
+    ['W'],
+    6,
+  )
+  const field = [onField(panharmonicon), onField(preston), onField(tocasia)]
+  const names = (s: Suggestion[]) => s.map((x) => `${x.source.name}×${x.times}`)
+
+  it('offers "whenever this creature enters or attacks" and an ability-word enters trigger as the permanent\'s own', () => {
+    const titan = onField(sunTitan)
+    expect(names(entersTriggers(titan, [titan], new Set()))).toEqual(['Sun Titan×1'])
+    const dup = onField(duplicant)
+    expect(names(entersTriggers(dup, [dup], new Set()))).toEqual(['Duplicant×1'])
+  })
+
+  it('reads a plural qualifier with a mana value clause, with the once-each-turn note', () => {
+    const entering = onField(companion)
+    const [welcome] = entersTriggers(entering, [onField(tocasia), entering], new Set()).filter(
+      (s) => s.source.name === "Tocasia's Welcome",
+    )
+    expect(welcome.certain).toBe(true)
+    expect(welcome.note).toMatch(/only once each turn/)
+    const big = onField(sunTitan)
+    expect(entersTriggers(big, [onField(tocasia), big], new Set())).toHaveLength(1)
+  })
+
+  it('doubles enters triggers with Panharmonicon only for an artifact or creature entering', () => {
+    const creature = onField(companion)
+    expect(names(entersTriggers(creature, [...field, creature], new Set(), 'notCast'))).toEqual([
+      'Spirited Companion×2',
+      'Preston, the Vanisher×2',
+      "Tocasia's Welcome×2",
+    ])
+    const enchantment = onField(court)
+    expect(names(entersTriggers(enchantment, [...field, enchantment], new Set()))).toEqual([
+      'Court of Grace×1',
+    ])
+    const land = onField(fountain)
+    expect(names(entersTriggers(land, [...field, land], new Set()))).toEqual(['Radiant Fountain×1'])
+  })
+
+  it('does not let Panharmonicon double cast triggers, and adds doublers rather than multiplying', () => {
+    expect(
+      names(castTriggers(kozilek, 0, [onField(panharmonicon), onField(monument)], new Set())),
+    ).toEqual(['Kozilek, Butcher of Truth×1', 'Forsaken Monument×1'])
+    const two = [onField(panharmonicon), { ...onField(panharmonicon), id: 'second' }]
+    const creature = onField(companion)
+    const [own] = entersTriggers(creature, [...two, creature], new Set())
+    expect(own.times).toBe(3)
+    expect(own.doublers).toEqual(['Panharmonicon', 'Panharmonicon'])
+  })
+
+  it('evaluates Preston\'s "if it wasn\'t cast" from how the permanent entered', () => {
+    const creature = onField(companion)
+    const cast = entersTriggers(creature, [onField(preston), creature], new Set(), 'cast')
+    expect(cast.map((s) => s.source.name)).toEqual(['Spirited Companion'])
+    const notCast = entersTriggers(creature, [onField(preston), creature], new Set(), 'notCast')
+    const [p] = notCast.filter((s) => s.source.name === 'Preston, the Vanisher')
+    expect(p.certain).toBe(true)
+    expect(p.dependsOnEntry).toBe(true)
+    const unknown = entersTriggers(creature, [onField(preston), creature], new Set())
+    const [u] = unknown.filter((s) => s.source.name === 'Preston, the Vanisher')
+    expect(u.certain).toBeUndefined()
+    expect(u.uncertainReason).toBe("if it wasn't cast")
+    // The token copy Preston makes is a token, so Preston does not trigger for it.
+    const token = onField(companion, true)
+    expect(
+      entersTriggers(token, [onField(preston), token], new Set(), 'notCast').map(
+        (s) => s.source.name,
+      ),
+    ).toEqual(['Spirited Companion'])
+  })
+
+  it('offers leaves triggers and the full enters set for a blink, but only leaves for a token', () => {
+    const apparitionOnField = onField(apparition)
+    const blinked = blinkTriggers(apparitionOnField, [...field, apparitionOnField], new Set())
+    expect(
+      blinked.map((s) => `${s.source.name}:${s.ability.text.slice(0, 29)}×${s.times}`),
+    ).toEqual([
+      'Skyclave Apparition:When this creature leaves the×1',
+      'Skyclave Apparition:When this creature enters, ex×2',
+      'Preston, the Vanisher:Whenever another nontoken cre×2',
+      "Tocasia's Welcome:Whenever one or more creature×2",
+    ])
+    const token = onField(apparition, true)
+    expect(blinkTriggers(token, [...field, token], new Set()).map((s) => s.ability.text)).toEqual([
+      apparition.faces[0].oracleText.split('\n')[1],
+    ])
+  })
+
+  it('reads what a resolving effect puts onto the battlefield', () => {
+    expect(
+      entryEffect(
+        'Exile target creature you control, then return that card to the battlefield under your control.',
+      ),
+    ).toEqual({ kind: 'blink' })
+    expect(
+      entryEffect(
+        'When this creature enters, you may exile target non-Angel creature you control, then return that card to the battlefield under your control.',
+      ),
+    ).toEqual({ kind: 'blink' })
+    // Delayed returns are not blinks; the user taps ↻ when the card comes back.
+    expect(
+      entryEffect(
+        "When this creature enters, exile another target permanent. Return that card to the battlefield under its owner's control at the beginning of the next end step.",
+      ),
+    ).toBeNull()
+    expect(entryEffect(dack.faces[0].oracleText)).toEqual({
+      kind: 'fromElsewhere',
+      several: true,
+      keeps: false,
+      cardType: 'creature',
+    })
+    expect(entryEffect(sunTitan.faces[0].oracleText.split('\n')[1])).toEqual({
+      kind: 'fromElsewhere',
+      several: false,
+      keeps: true,
+      cardType: 'permanent',
+    })
+    expect(entryEffect(preston.faces[0].oracleText.split('\n')[0])).toEqual({ kind: 'tokenCopy' })
+    expect(
+      entryEffect(
+        "Embalm {5}{W} ({5}{W}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a white Zombie Angel with no mana cost. Embalm only as a sorcery.)",
+      ),
+    ).toEqual({ kind: 'tokenCopy' })
+    // Fetching a basic land is not worth a question.
+    expect(
+      entryEffect(
+        'When this creature enters, if an opponent controls more lands than you, you may search your library for a Plains card, put it onto the battlefield, then shuffle.',
+      ),
+    ).toBeNull()
+    expect(
+      entryEffect(
+        'Destroy target permanent. Its controller creates a 3/3 green Elephant creature token.',
+      ),
+    ).toBeNull()
+    expect(entryEffect('Legendary Creature — Eldrazi')).toBeNull()
   })
 })

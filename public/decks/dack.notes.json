@@ -1,0 +1,51 @@
+[
+  {
+    "id": "panharmonicon-scope",
+    "title": "Panharmonicon doubles only what an artifact or creature entering causes",
+    "cards": ["Panharmonicon"],
+    "body": "Panharmonicon only cares about an artifact or creature entering. When one does, every triggered ability of a permanent I control that triggers because of that entering triggers twice: the arriving creature's own enters ability, Preston, Tocasia's Welcome, and Sun Titan's \"enters or attacks\" on entering. Gatherer ruling: it affects a permanent's own enters-the-battlefield abilities as well as other abilities that trigger when that permanent enters. An enchantment entering (Oblivion Ring, Grasp of Fate, Court of Grace, Touch the Spirit Realm) or a land entering (Radiant Fountain) is not doubled. Spirited Companion is an enchantment creature, so it is. Each instance is a separate ability with its own targets and choices (ruling), and two Panharmonicons make three instances, not four (ruling; CR 603.2d)."
+  },
+  {
+    "id": "blink-new-object",
+    "title": "A blinked permanent comes back as a new object that was not cast",
+    "cards": [
+      "Cloudshift",
+      "Ephemerate",
+      "Restoration Angel",
+      "Flickerwisp",
+      "Glimmerpoint Stag",
+      "Teleportation Circle",
+      "Conjurer's Closet",
+      "Eldrazi Displacer",
+      "Charming Prince",
+      "Eerie Interlude",
+      "Long Road Home",
+      "Touch the Spirit Realm"
+    ],
+    "body": "The exiled permanent returns as a new object with no memory of what it was (CR 400.7; rulings on Cloudshift and Ephemerate). Its enters abilities trigger again, so does anything watching for it entering, and Panharmonicon doubles all of that if it is an artifact or creature. It was not cast, so Preston copies it. Counters are gone and Auras fall off. A token blinked this way ceases to exist and does not come back (CR 111.8; same rulings). In the app: a blink that returns the card at once asks which permanent came back. For a return at the beginning of the next end step (Flickerwisp, Glimmerpoint Stag, Charming Prince, Eerie Interlude, Long Road Home, Touch the Spirit Realm's channel) tap ↻ on the battlefield chip when it returns."
+  },
+  {
+    "id": "dack-triggers-are-mine",
+    "title": "Dack's creatures trigger for me before the opponents get them",
+    "cards": ["Dack Fayden, Helping Hand", "Preston, the Vanisher"],
+    "body": "Dack puts the revealed creatures onto the battlefield under my control, then each opponent gains control of one, all during the resolution of the same ability. Their enters abilities triggered while I controlled them, so I control those triggers and choose their targets (CR 603.3a). Preston sees nontoken creatures I control entering that weren't cast, so I get an Illusion copy of each. With Panharmonicon out, Dack's own ability triggers twice and every enters ability of the arriving creatures triggers twice. The creatures are goaded for the rest of the game: they attack each combat if able, and attack a player other than me if able (CR 701.15b). In the app: after Dack's trigger resolves, pick each creature in turn; they are not added to my battlefield list."
+  },
+  {
+    "id": "preston-token-enters",
+    "title": "Preston's token is a copy, and it enters too",
+    "cards": ["Preston, the Vanisher"],
+    "body": "The token is a copy of the creature except that it is a 0/1 white Illusion, so it has the creature's enters ability, and that ability triggers for the token as it enters (CR 603.6a: the newcomers are checked too). Panharmonicon doubles that, because a creature entered. Preston does not trigger for the token itself, because Preston asks for a nontoken creature. Preston does not trigger for a creature I cast: \"if it wasn't cast\" is an intervening if, checked when the creature enters and again when the ability resolves (CR 603.4). Copies of a creature spell made on the stack become tokens, so they never count either."
+  },
+  {
+    "id": "tocasia-once",
+    "title": "Tocasia's Welcome triggers once per event and only once each turn",
+    "cards": ["Tocasia's Welcome"],
+    "body": "\"One or more creatures ... enter\" triggers once however many enter at the same time: Myr Battlesphere's four Myr, or Dack's creatures. The creatures need mana value 3 or less. A token copy's mana value is that of what it copies, so Preston's Illusions of cheap creatures count, and Court of Grace's tokens have mana value 0. It triggers only once each turn, so a second qualifying entry later in the turn does nothing; the app can't tell whether it already triggered this turn, so untick it if it has. Whether Panharmonicon can make it trigger a second time within the same event is not settled by the rules text or a ruling; agree it with the table before it matters."
+  },
+  {
+    "id": "sun-titan-returns",
+    "title": "What Sun Titan, Karmic Guide and Emeria return also enters",
+    "cards": ["Sun Titan", "Karmic Guide", "Emeria, the Sky Ruin"],
+    "body": "\"Whenever this creature enters or attacks\" is an enters trigger when Sun Titan enters, so Panharmonicon doubles it then, but not when it attacks. What these return enters the battlefield without being cast: its own enters abilities fire, Preston copies it if it is a nontoken creature, and Panharmonicon doubles that if it is an artifact or creature. Sun Titan can return a land with mana value 3 or less, such as Radiant Fountain, whose \"when this land enters\" then triggers. The app asks what entered after each of these resolves."
+  }
+]

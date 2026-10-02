@@ -87,8 +87,21 @@ const GRANTING_VERB = /\b(gets?|has|have|gains?|becomes?)\b/i
 /** Ability words ("Landfall — Whenever ...") prefix the real text with a word and a dash. */
 const ABILITY_WORD_PREFIX = /^[A-Z][A-Za-z' ]{1,30}\s+[—–-]\s+/
 
+/** "Imprint — When this creature enters, ..." without the ability word, which has no rules meaning (CR 207.2c). */
+export function stripAbilityWord(text: string): string {
+  return text.replace(ABILITY_WORD_PREFIX, '')
+}
+
+/** "... that ability triggers an additional time": Panharmonicon, Echoes of Eternity, Yarok. */
+const DOUBLER_PATTERN = /triggers an additional time/i
+
+/** True if the card makes other triggered abilities trigger extra times (CR 603.2d). */
+export function isTriggerDoubler(card: Card): boolean {
+  return card.faces.some((f) => DOUBLER_PATTERN.test(f.oracleText))
+}
+
 export function classifyLine(line: string): AbilityKind {
-  const withoutAbilityWord = line.replace(ABILITY_WORD_PREFIX, '')
+  const withoutAbilityWord = stripAbilityWord(line)
   const reminder = /\(([^)]*)\)/.exec(withoutAbilityWord)?.[1] ?? ''
   const main = withoutAbilityWord.replace(/\s*\([^)]*\)/g, '').trim()
   const lower = main.toLowerCase()
@@ -254,12 +267,19 @@ function escapeRegExp(text: string): string {
  * qualifies. The palette exists to cut the deck down to what matters mid-turn, so the
  * default picks cards that have an ability that uses the stack, instants and sorceries,
  * which exist nowhere but the stack, and any spell whose type the commander's own
- * cast trigger names, since casting those is what sets the turn off. Ability-less
+ * cast trigger names, since casting those is what sets the turn off. A trigger doubler
+ * such as Panharmonicon has no ability of its own that uses the stack, but it has to be
+ * on the battlefield list for the app to double anything, so it is ticked too. Ability-less
  * permanents such as mana rocks are left out; the user can tick them at import or add
  * them mid-game with quick add.
  */
 export function includedByDefault(card: Card, watchedTypes: string[] = []): boolean {
-  return hasStackAbility(card) || isInstantOrSorcery(card) || hasSpellType(card, watchedTypes)
+  return (
+    hasStackAbility(card) ||
+    isInstantOrSorcery(card) ||
+    hasSpellType(card, watchedTypes) ||
+    isTriggerDoubler(card)
+  )
 }
 
 /** Short reason shown at import for why a card is or is not ticked. */
@@ -274,6 +294,7 @@ export function inclusionReason(card: Card, watchedTypes: string[] = []): string
     parts.push(card.faces.some((f) => /\bInstant\b/.test(f.typeLine)) ? 'instant' : 'sorcery')
   if (triggered) parts.push(`${triggered} triggered`)
   if (activated) parts.push(`${activated} activated`)
+  if (isTriggerDoubler(card)) parts.push('doubles triggers')
   if (parts.length > 0) return parts.join(', ')
   return card.faces.every(isLand) ? 'land, does not use the stack' : 'no stack abilities'
 }

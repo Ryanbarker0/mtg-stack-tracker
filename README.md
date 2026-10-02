@@ -14,7 +14,7 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - Every card is looked up on Scryfall.
   No card text is hand-authored or assumed.
 - Each paragraph of oracle text is classified as triggered, activated, mana or static.
-  Instants, sorceries and cards with a triggered or activated ability are ticked for the in-game palette by default, and you can override any card.
+  Instants, sorceries, cards with a triggered or activated ability, and trigger doublers such as Panharmonicon are ticked for the in-game palette by default, and you can override any card.
   If the commander's text says "whenever you cast a(n) X spell", every card of type X is ticked as well, so for Ulalek all Eldrazi spells are in the palette.
   Every nonland card uses the stack when cast, so anything left unticked can still be added mid-game with quick add.
 - In a game, tap an ability to put it on the stack, or tap Cast to put the card on as a spell.
@@ -28,12 +28,22 @@ It makes the stack visible to you and to the table, and keeps the order honest.
 - Echoes of Eternity is handled on both lines.
   Its doubling is applied as a ×2 on suggested triggers from colorless sources, and its "copy it" trigger copies the spell automatically when it resolves.
   Copies of that trigger, such as those Ulalek makes, copy the spell again.
+- Panharmonicon is read for what it is: it doubles enters triggers only when an artifact or creature entered, never cast triggers or an enchantment's own enters trigger.
+  Doublers add up rather than multiply, as CR 603.2d says, and every doubled item's lineage names the doubler.
+- Blink is a first-class event.
+  When Cloudshift, Ephemerate, Restoration Angel, Teleportation Circle or anything else that exiles and returns a permanent at once resolves, the app asks which of your permanents came back and offers its leaves triggers and the full set of enters triggers, marked as not cast.
+  For a delayed return such as Flickerwisp or Eerie Interlude, tap ↻ on the permanent's battlefield chip when it comes back.
+  A blinked token is removed, because it does not return.
+- Effects that put cards onto the battlefield without casting them, such as Dack Fayden, Sun Titan or Karmic Guide, ask what entered and offer its enters triggers; Dack's creatures are not added to your battlefield because the opponents take them.
+  Preston, the Vanisher's token copy is handled the same way: pick what it copies, and the copy's own enters trigger is offered.
+- "If it wasn't cast" (Preston) is evaluated from how the permanent entered: a resolved spell was cast, a blinked, reanimated or token permanent was not.
+  The sheet has a Cast / Not cast toggle for the rare case where the app guessed wrong.
 - When a copy-all trigger such as Ulalek's is on top, the item shows "Pay, copy all" and "Don't pay" so the choice is explicit.
 - A grouped summary above the stack counts what is there, so a 50-item Ulalek stack can be read to the table.
   The log has the same summary for everything that resolved, plus how many tokens were made.
 - A cascade trigger on top offers "Cast the hit".
   Pick the exiled card from the whole deck and it is cast from exile, with its own trigger sheet.
-- "Resolve N until the next choice" clears quiet items from the top and stops at a payment, a sacrifice, a cascade, an opponent's item, or a permanent with enters triggers.
+- "Resolve N until the next choice" clears quiet items from the top and stops at a payment, a sacrifice, a cascade, a blink or other effect that puts something onto the battlefield, an opponent's item, or a permanent with enters triggers.
   It only appears when at least two items would resolve, and it is always optional.
 - Cast sheets know where the spell was cast from.
   The Cast button means from hand; cascade hits are from exile; a toggle on the sheet covers Mystic Forge and the like.

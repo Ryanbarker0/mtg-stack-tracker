@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { entryEffect } from '../lib/triggers'
 import type { Card, GameState, StackItem } from '../lib/types'
 import { YOU, copiesAllOthers, sacrificesSource, siblingsOf, type GameAction } from '../state/game'
 import { shortKind } from '../lib/summary'
@@ -214,6 +215,15 @@ function StackRow({
             {/^cascade/i.test(item.text)
               ? 'Exile until a nonland card with lesser mana value. Cast it for free, or not.'
               : 'Discover: exile until a nonland card of that mana value or less. Cast it for free or put it in your hand.'}
+          </div>
+        )}
+        {isTop && !opponent && entryEffect(item.text) && (
+          <div className="effect kind-triggered">
+            {entryEffect(item.text)?.kind === 'blink'
+              ? 'A permanent leaves and comes back. After resolving, pick which one; its triggers are offered.'
+              : entryEffect(item.text)?.kind === 'tokenCopy'
+                ? 'A token copy enters. After resolving, pick what it copies; its triggers are offered.'
+                : 'Cards are put onto the battlefield. After resolving, pick what entered; its triggers are offered.'}
           </div>
         )}
         {isTop && sacrificesSource(item) && (

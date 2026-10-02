@@ -12,13 +12,16 @@ interface Props {
   onShowCard: (card: Card) => void
   onFieldAdd: (card: Card, faceIndex: number) => void
   onFieldRemove: (id: string) => void
+  /** The permanent left the battlefield and came back (a blink); offer its triggers again. */
+  onFieldReenter: (id: string) => void
 }
 
 /**
  * The in-game card palette: every included card in the deck with its triggered and
  * activated abilities as tappable rows. Tapping a row puts that ability on the stack;
  * "Cast" puts the card itself on as a spell and offers matching triggers. The strip at
- * the top lists the permanents you control, which drives trigger suggestions.
+ * the top lists the permanents you control, which drives trigger suggestions; each chip
+ * can be blinked (↻) or removed (✕).
  */
 export function Palette({
   deck,
@@ -28,6 +31,7 @@ export function Palette({
   onShowCard,
   onFieldAdd,
   onFieldRemove,
+  onFieldReenter,
 }: Props) {
   const [filter, setFilter] = useState('')
 
@@ -68,20 +72,30 @@ export function Palette({
           </span>
         )}
         {battlefield.map((p) => (
-          <button
-            key={p.id}
-            className={`chip ${p.isToken ? 'token' : ''}`}
-            onClick={() => onFieldRemove(p.id)}
-            title={
-              p.isToken
-                ? 'Token. Tap to remove from the battlefield'
-                : 'Tap to remove from the battlefield'
-            }
-          >
+          <span key={p.id} className={`chip-group ${p.isToken ? 'token' : ''}`}>
             {p.card.faces[p.faceIndex]?.name ?? p.card.name}
             {p.isToken && <span className="faint">token</span>}
-            <span className="x">✕</span>
-          </button>
+            <button
+              className="icon reenter"
+              onClick={() => onFieldReenter(p.id)}
+              aria-label={`${p.card.name} leaves and comes back`}
+              title={
+                p.isToken
+                  ? 'Blinked: a token that leaves the battlefield does not come back'
+                  : 'Blinked: it left the battlefield and came back, so its triggers fire again'
+              }
+            >
+              ↻
+            </button>
+            <button
+              className="icon"
+              onClick={() => onFieldRemove(p.id)}
+              aria-label={`Remove ${p.card.name} from the battlefield`}
+              title="Remove from the battlefield"
+            >
+              ✕
+            </button>
+          </span>
         ))}
       </div>
       <div className="pane-body">

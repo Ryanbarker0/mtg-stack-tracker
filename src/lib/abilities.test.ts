@@ -206,3 +206,30 @@ describe('extractAbilities and usesStack', () => {
     expect(includedByDefault(card('Flying', 'Creature — Human'), ['Eldrazi'])).toBe(false)
   })
 })
+
+describe('trigger doublers', () => {
+  const panharmonicon: Card = {
+    scryfallId: 'p',
+    oracleId: 'p',
+    name: 'Panharmonicon',
+    typeLine: 'Artifact',
+    keywords: [],
+    colors: [],
+    manaValue: 4,
+    faces: [
+      {
+        name: 'Panharmonicon',
+        manaCost: '{4}',
+        typeLine: 'Artifact',
+        oracleText:
+          'If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.',
+      },
+    ],
+    scryfallUri: 'https://scryfall.com/card/x/1/panharmonicon',
+  }
+
+  it('ticks a doubler for the palette even though it has no stack ability of its own', () => {
+    expect(includedByDefault(panharmonicon)).toBe(true)
+    expect(inclusionReason(panharmonicon)).toBe('doubles triggers')
+  })
+})

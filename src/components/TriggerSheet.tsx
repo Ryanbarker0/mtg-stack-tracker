@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { CastFrom, Suggestion } from '../lib/triggers'
+import type { CastFrom, Entry, Suggestion } from '../lib/triggers'
 
 interface Props {
   title: string
@@ -8,14 +8,17 @@ interface Props {
   /** For cast sheets: where the spell was cast from, when a row depends on it. */
   castFrom?: CastFrom
   onCastFromChange?: (castFrom: CastFrom) => void
+  /** For enters sheets: whether the permanent was cast, when a row depends on it. */
+  entry?: Entry
+  onEntryChange?: (entry: Entry) => void
   onConfirm: (chosen: Suggestion[]) => void
   onSkip: () => void
 }
 
 /**
- * Offers the triggers the app thinks fire for a cast or an enters event. Everything is
- * pre-ticked; uncertain matches carry a hint so the user can untick them. The list is in
- * stack order, bottom first, so the last row will be on top of the stack.
+ * Offers the triggers the app thinks fire for a cast, an enters or a blink event.
+ * Everything is pre-ticked; uncertain matches carry a hint so the user can untick them.
+ * The list is in stack order, bottom first, so the last row will be on top of the stack.
  */
 export function TriggerSheet({
   title,
@@ -23,6 +26,8 @@ export function TriggerSheet({
   suggestions,
   castFrom,
   onCastFromChange,
+  entry,
+  onEntryChange,
   onConfirm,
   onSkip,
 }: Props) {
@@ -42,6 +47,7 @@ export function TriggerSheet({
   }
   const count = suggestions.reduce((n, s, i) => n + (ticked[i] ? s.times : 0), 0)
   const showCastFrom = onCastFromChange && suggestions.some((s) => s.dependsOnCastFrom)
+  const showEntry = onEntryChange && suggestions.some((s) => s.dependsOnEntry)
 
   return (
     <div className="modal-backdrop" onClick={onSkip} role="presentation">
@@ -72,6 +78,24 @@ export function TriggerSheet({
                 onClick={() => onCastFromChange('elsewhere')}
               >
                 Elsewhere (cascade, exile, library)
+              </button>
+            </div>
+          )}
+
+          {showEntry && (
+            <div className="cast-from">
+              <span className="muted">It entered because it was</span>
+              <button
+                className={entry === 'cast' ? 'on' : ''}
+                onClick={() => onEntryChange('cast')}
+              >
+                Cast
+              </button>
+              <button
+                className={entry === 'notCast' ? 'on' : ''}
+                onClick={() => onEntryChange('notCast')}
+              >
+                Not cast (blinked, put onto the battlefield, token)
               </button>
             </div>
           )}

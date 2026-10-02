@@ -11,5 +11,12 @@
     "name": "Dinos [Pantlaza]",
     "file": "pantlaza.txt",
     "note": "Ryan's list, exported from Archidekt on 2026-09-04."
+  },
+  {
+    "id": "dack",
+    "name": "Goaded Blink [Dack Fayden, Helping Hand]",
+    "file": "dack.txt",
+    "notes": "dack.notes.json",
+    "note": "Ryan's list, exported from Archidekt on 2026-10-01."
   }
 ]

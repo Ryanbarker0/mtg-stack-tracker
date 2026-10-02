@@ -1,0 +1,79 @@
+Commander
+1x Dack Fayden, Helping Hand (frc) 89
+
+Deck
+25x Plains (trk) 317
+1x Ancient Tomb (plst) TMP-315
+1x Angel of Sanctions (drc) 62
+1x Angel of Serenity (c21) 83
+1x Angel of the Ruins (eoc) 63
+1x Arcane Signet (frc) 20
+1x Archaeomancer's Map (soc) 136
+1x Blightsteel Colossus (plst) 2XM-235
+1x Bonders' Enclave (fic) 376
+1x Breaker of Armies (plst) BFZ-3
+1x Buried Ruin (eoc) 150
+1x Charming Prince (fdn) 568
+1x Cloudshift (tle) 152
+1x Comeuppance (mkc) 58
+1x Command Beacon (tdc) 352
+1x Conjurer's Closet (drc) 126
+1x Court of Grace (fdc) 21
+1x Dawnbringer Cleric (clb) 15
+1x Duplicant (drc) 54
+1x Eerie Interlude (khc) 22
+1x Eldrazi Displacer (m3c) 169
+1x Elite Spellbinder (stx) 17
+1x Emeria, the Sky Ruin (soc) 368
+1x Endless Atlas (fdc) 256
+1x Ephemerate (h1r) 1
+1x Everflowing Chalice (eoc) 137
+1x Fateful Absence (fdc) 30
+1x Flickerwisp (2x2) 11
+1x Galactus, Devourer of Worlds (msc) 8
+1x Generous Gift (msc) 133
+1x Get Lost (lci) 14
+1x Glimmerpoint Stag (plst) SOM-9
+1x Grasp of Fate (fdc) 32
+1x Guardian of Faith (soc) 148
+1x Homeward Path (c16) 301
+1x Inspiring Overseer (fdc) 35
+1x Karmic Guide (soc) 151
+1x Knight of the White Orchid (moc) 193
+1x Land Tax (soc) 153
+1x Long Road Home (jmp) 120
+1x Loyal Warhound (blc) 107
+1x Meteor Golem (msc) 205
+1x Mind Stone (soc) 352
+1x Mind's Eye (msc) 288
+1x Myr Battlesphere (tdc) 322
+1x Oblivion Ring (plst) LRW-34
+1x Palace Jailer (msc) 140
+1x Panharmonicon (drc) 135
+1x Path to Exile (frc) 30
+1x Pearl Medallion (mh3) 294
+1x Preston, the Vanisher (j22) 8
+1x Radiant Fountain (fdc) 308
+1x Restoration Angel (inr) 38
+1x Scroll Rack (cmr) 337
+1x Skyclave Apparition (soc) 173
+1x Smothering Tithe (cmm) 57
+1x Sol Ring (frc) 21
+1x Solemn Simulacrum (msc) 215
+1x Spirited Companion (j25) 256
+1x Sun Titan (soc) 178
+1x Sunscorched Desert (akh) 249
+1x Swords to Plowshares (frc) 37
+1x Teferi's Protection (2x2) 32
+1x Teleportation Circle (afr) 39
+1x Thought Vessel (msc) 222
+1x Tocasia's Welcome (soc) 181
+1x Touch the Spirit Realm (neo) 40
+1x Trouble in Pairs (mkc) 15
+1x Vanquish the Horde (msc) 146
+1x Vow of Duty (mkc) 89
+1x War Room (soc) 422
+1x Wayfarer's Bauble (hoc) 211
+1x Witch Enchanter // Witch-Blessed Meadow (mh3) 239
+1x Wrath of God (cmm) 70
+1x Zetalpa, Primal Dawn (tdc) 142

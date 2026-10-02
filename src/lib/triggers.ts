@@ -1,15 +1,17 @@
-import { extractAbilities, splitOracleText } from './abilities'
+import { extractAbilities, isTriggerDoubler, splitOracleText, stripAbilityWord } from './abilities'
 import type { Ability, BattlefieldPermanent, Card, CardFace } from './types'
 
 /**
- * Suggests which triggered abilities go on the stack when a spell is cast or a
- * permanent enters, by reading the oracle text of the permanents you control.
+ * Suggests which triggered abilities go on the stack when a spell is cast, a permanent
+ * enters, or a permanent leaves and comes back, by reading the oracle text of the
+ * permanents you control.
  *
- * This is deliberately shallow. It recognises the two trigger shapes that dominate a
- * copy-heavy turn, "whenever you cast a[n] X spell" and "whenever a[n] X enters", and
- * evaluates the X against Scryfall's type line and colours. Anything it cannot
- * evaluate is still offered, marked uncertain, so the user decides. Intervening-if
- * clauses and anything after the qualifier are never evaluated.
+ * This is deliberately shallow. It recognises the trigger shapes that dominate a
+ * copy-heavy or blink-heavy turn, "whenever you cast a[n] X spell", "whenever a[n] X
+ * enters" and "when this leaves the battlefield", and evaluates the X against Scryfall's
+ * type line and colours. Anything it cannot evaluate is still offered, marked uncertain,
+ * so the user decides. Intervening-if clauses are evaluated only when the app knows the
+ * answer ("if it wasn't cast"); anything else after the qualifier is handed to the user.
  */
 
 export interface Suggestion {
@@ -25,8 +27,10 @@ export interface Suggestion {
   certain: boolean | undefined
   /** How many times the ability triggers (2 when a doubler such as Echoes of Eternity applies). */
   times: number
-  /** Name of the doubler, when times > 1. */
+  /** Text explaining the count when times > 1, e.g. "Panharmonicon" or "2× from Zhulodok + Echoes of Eternity". */
   doubledBy?: string
+  /** Names of the permanents whose doubling applied, for the item's lineage. */
+  doublers?: string[]
   /** True when the source is a commander; these are placed on top of the stack. */
   fromCommander: boolean
   /** True when the ability copies the spell that triggered it ("whenever you cast ..., copy it"). */
@@ -37,9 +41,17 @@ export interface Suggestion {
   note?: string
   /** True when the condition depended on where the spell was cast from. */
   dependsOnCastFrom?: boolean
+  /** True when the condition depended on whether the entering permanent was cast. */
+  dependsOnEntry?: boolean
   /** For abilities a permanent gives the spell, the permanent's name. */
   grantedBy?: string
 }
+
+/**
+ * How a permanent came to be on the battlefield. A resolved spell was cast; a blinked
+ * permanent, a card put onto the battlefield by an effect, or a token was not.
+ */
+export type Entry = 'cast' | 'notCast'
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -62,10 +74,16 @@ function withNotes(suggestion: Suggestion): Suggestion {
       note: 'Sacrifices itself, so only the first of these to resolve does anything. The rest fizzle.',
     }
   }
-  if (ONCE_EACH_TURN.test(suggestion.ability.text)) {
+  if (DO_ONCE_EACH_TURN.test(suggestion.ability.text)) {
     return {
       ...suggestion,
-      note: 'Once each turn. It still triggers every time, but if it has already happened this turn, this one does nothing.',
+      note: 'Once each turn (CR 603.2h). It only triggers if it has not done this yet this turn.',
+    }
+  }
+  if (TRIGGERS_ONCE_EACH_TURN.test(suggestion.ability.text)) {
+    return {
+      ...suggestion,
+      note: 'Triggers only once each turn. If it has already triggered this turn, it does not trigger again.',
     }
   }
   return suggestion
@@ -75,6 +93,7 @@ interface Evaluation {
   result: boolean | undefined
   reason?: string
   dependsOnCastFrom?: boolean
+  dependsOnEntry?: boolean
 }
 
 const COPIES_SPELL_PATTERN = /\bcopy (?:it|that spell)\b/i
@@ -94,10 +113,25 @@ const ENTERS_PATTERN =
 /** "Whenever Pantlaza or another Dinosaur you control enters": the source itself counts too. */
 const SELF_OR_ANOTHER_ENTERS_PATTERN =
   /\bwhenever (?:this (?:creature|permanent|artifact|enchantment)|[A-Z][\w',\- ]*?) or another ([a-z][a-z\- ]*?)(?: you control)?((?: with [^,.]*?)?) enters?\b(.*)$/i
-const ONCE_EACH_TURN =
-  /\b(do this|this ability triggers|triggers) only once each turn\b|\bonly once each turn\b/i
-const OWN_ENTERS_PATTERN = /^when (?:this|[^,]+?) enters\b/i
-const DOUBLER_PATTERN = /triggers an additional time/i
+/** "Do this only once each turn": the ability does not trigger once it has happened (CR 603.2h). */
+const DO_ONCE_EACH_TURN = /\bdo this only once each turn\b/i
+/** "This ability triggers only once each turn." */
+const TRIGGERS_ONCE_EACH_TURN = /\btriggers only once each turn\b/i
+/**
+ * "When this creature enters", "Whenever this creature enters or attacks", "When Dack
+ * Fayden enters". Case-sensitive on purpose: a lowercase subject ("a creature", "another
+ * Dinosaur") is a watcher, handled by ENTERS_PATTERN, not the permanent's own trigger.
+ */
+const OWN_ENTERS_PATTERN = /^When(?:ever)? (?:this\b[^,]*?|[A-Z][^,]*?) enters\b/
+/** "When this creature leaves the battlefield" (CR 603.6c). */
+const OWN_LEAVES_PATTERN = /^When(?:ever)? (?:this\b[^,]*?|[A-Z][^,]*?) leaves the battlefield\b/
+/**
+ * Panharmonicon: "If an artifact or creature entering causes a triggered ability of a
+ * permanent you control to trigger, that ability triggers an additional time." Group 1 is
+ * the qualifier on what entered. Yarok and Elesh Norn say "a permanent entering".
+ */
+const ENTERING_DOUBLER_PATTERN =
+  /^If (?:a|an) ([a-z][a-z\- ]*?) entering(?: the battlefield)? causes a triggered ability of a permanent you control to trigger\b/i
 
 const CARD_TYPES = [
   'creature',
@@ -127,7 +161,12 @@ interface Subject {
   face: CardFace
   isToken: boolean
   castFrom?: CastFrom
+  /** For an entering permanent, whether it was cast. Undefined when the app does not know. */
+  wasCast?: boolean
 }
+
+/** The event a trigger is being suggested for; doublers only apply to some events. */
+type TriggerEvent = { kind: 'cast' } | { kind: 'enters'; entering: Subject } | { kind: 'leaves' }
 
 /**
  * Evaluates a qualifier such as "Eldrazi", "colorless creature" or "nontoken creature"
@@ -145,7 +184,7 @@ export function qualifierMatches(qualifier: string, subject: Subject): boolean |
 
 function termMatches(term: string, subject: Subject): boolean | undefined {
   const typeLine = subject.face.typeLine
-  const words = term.split(/\s+/).filter((w) => w !== '' && w !== 'spell' && w !== 'permanent')
+  const words = term.split(/\s+/).filter((w) => w !== '' && !/^(spells?|permanents?)$/.test(w))
   let uncertain = false
   for (const word of words) {
     const result = wordMatches(word, typeLine, subject)
@@ -163,16 +202,19 @@ function wordMatches(word: string, typeLine: string, subject: Subject): boolean 
   if (word in COLOR_WORDS)
     return colors === undefined ? undefined : colors.includes(COLOR_WORDS[word])
   if (word === 'nontoken') return !subject.isToken
-  if (word === 'token') return subject.isToken
+  if (word === 'token' || word === 'tokens') return subject.isToken
   if (word === 'historic') return /\b(Artifact|Legendary|Saga)\b/.test(typeLine)
   if (word.startsWith('non')) {
     const inner = word.slice(3)
     const result = wordMatches(inner, typeLine, subject)
     return result === undefined ? undefined : !result
   }
-  if (CARD_TYPES.includes(word)) return new RegExp(`\\b${word}\\b`, 'i').test(typeLine)
+  // "one or more creatures enter" names the type in the plural; the type line is singular.
+  const forms = word.endsWith('s') ? [word, word.slice(0, -1)] : [word]
+  const onTypeLine = (w: string) => new RegExp(`\\b${w}\\b`, 'i').test(typeLine)
+  if (forms.some((w) => CARD_TYPES.includes(w))) return forms.some(onTypeLine)
   // Anything else is treated as a subtype (Eldrazi, Human, Equipment, ...).
-  if (/^[a-z][a-z-]*$/.test(word)) return new RegExp(`\\b${word}\\b`, 'i').test(typeLine)
+  if (/^[a-z][a-z-]*$/.test(word)) return forms.some(onTypeLine)
   return undefined
 }
 
@@ -202,9 +244,19 @@ const POWER_CLAUSES: Array<[RegExp, (m: RegExpExecArray, value: number) => boole
 ]
 
 function evaluateTrailing(rest: string, subject: Subject): Evaluation {
-  // An intervening "if" right after the trigger condition is for the user to judge.
+  // An intervening "if" right after the trigger condition is for the user to judge, except
+  // "if it wasn't cast" (Preston, the Vanisher), which the app knows for a permanent that
+  // resolved as a spell, was blinked, or was put onto the battlefield by an effect.
   const ifClause = /^\s*,\s*(if\b[^,]+)/i.exec(rest)
-  if (ifClause) return { result: undefined, reason: ifClause[1].trim() }
+  if (ifClause) {
+    const clause = ifClause[1].trim()
+    if (/^if it wasn't cast$/i.test(clause)) {
+      if (subject.wasCast === undefined)
+        return { result: undefined, reason: clause, dependsOnEntry: true }
+      return { result: !subject.wasCast, dependsOnEntry: true }
+    }
+    return { result: undefined, reason: clause }
+  }
   // The effect follows straight after the qualifier: no condition to evaluate.
   if (!/^\s+[a-z]/i.test(rest)) return { result: true }
   let text = rest.trim()
@@ -287,26 +339,43 @@ function combine(qualifier: boolean | undefined, rest: string, subject: Subject)
       result: undefined,
       reason: reasons.join('; '),
       dependsOnCastFrom: trailing.dependsOnCastFrom,
+      dependsOnEntry: trailing.dependsOnEntry,
     }
   }
   return trailing
 }
 
-/** Doublers on the battlefield, e.g. Echoes of Eternity. */
+/**
+ * Doublers on the battlefield that apply to `source` triggering for `event`. Echoes of
+ * Eternity doubles any trigger of a colorless source; Panharmonicon doubles a trigger
+ * only when an artifact or creature entering caused it. Each applicable doubler adds one
+ * more instance (CR 603.2d): two Panharmonicons make three, not four.
+ */
 function doublersFor(
   source: Card,
   battlefield: BattlefieldPermanent[],
-): { times: number; doubledBy?: string } {
+  event: TriggerEvent,
+): { times: number; doubledBy?: string; doublers?: string[] } {
+  const doublers: string[] = []
   for (const permanent of battlefield) {
     if (permanent.card.scryfallId === source.scryfallId && !permanent.isToken) continue
+    if (!isTriggerDoubler(permanent.card)) continue
     const face = permanent.card.faces[permanent.faceIndex] ?? permanent.card.faces[0]
-    if (!DOUBLER_PATTERN.test(face.oracleText)) continue
-    // Echoes of Eternity is the only such card in print; it doubles colorless sources.
-    const wantsColorless = /colorless/i.test(face.oracleText)
+    const text = face.oracleText.replace(/\s*\([^)]*\)/g, '')
+    const entering = ENTERING_DOUBLER_PATTERN.exec(text)
+    if (entering) {
+      if (event.kind !== 'enters') continue
+      if (qualifierMatches(entering[1], event.entering) !== true) continue
+      doublers.push(permanent.card.name)
+      continue
+    }
+    // Echoes of Eternity doubles colorless sources; an unrecognised doubler is assumed to apply.
+    const wantsColorless = /colorless/i.test(text)
     const isColorless = source.colors !== undefined && source.colors.length === 0
-    if (!wantsColorless || isColorless) return { times: 2, doubledBy: permanent.card.name }
+    if (!wantsColorless || isColorless) doublers.push(permanent.card.name)
   }
-  return { times: 1 }
+  if (doublers.length === 0) return { times: 1 }
+  return { times: 1 + doublers.length, doubledBy: doublers.join(' + '), doublers }
 }
 
 function triggeredAbilities(card: Card, faceIndex: number): Ability[] {
@@ -339,7 +408,7 @@ export function castTriggers(
       uncertainReason: OWN_CAST_CONDITION.test(ability.text)
         ? interveningIf(ability.text)
         : undefined,
-      ...doublersFor(spell, battlefield),
+      ...doublersFor(spell, battlefield, { kind: 'cast' }),
       fromCommander: false,
       copiesSpell: false,
     })
@@ -367,7 +436,7 @@ export function castTriggers(
         .replace(/^when you cast one,\s*/i, '')
         .replace(/\s*Then do it again\.?\s*$/i, '')
       const effect = reminder.charAt(0).toUpperCase() + reminder.slice(1)
-      const doubling = doublersFor(spell, battlefield)
+      const doubling = doublersFor(spell, battlefield, { kind: 'cast' })
       suggestions.push({
         source: spell,
         sourceFaceIndex: spellFaceIndex,
@@ -387,6 +456,7 @@ export function castTriggers(
         doubledBy: [`${cascades}× from ${permanent.card.name}`, doubling.doubledBy]
           .filter(Boolean)
           .join(' + '),
+        doublers: doubling.doublers,
         fromCommander: false,
         copiesSpell: false,
       })
@@ -406,7 +476,7 @@ export function castTriggers(
         certain: evaluation.result,
         uncertainReason: evaluation.reason,
         dependsOnCastFrom: evaluation.dependsOnCastFrom,
-        ...doublersFor(permanent.card, battlefield),
+        ...doublersFor(permanent.card, battlefield, { kind: 'cast' }),
         fromCommander: commanderIds.has(permanent.card.oracleId),
         copiesSpell: COPIES_SPELL_PATTERN.test(ability.text),
       })
@@ -419,28 +489,38 @@ export function castTriggers(
 /**
  * Triggers to offer when `permanent` enters: its own "when this enters" abilities plus
  * every matching "whenever a[n] X enters" ability on the battlefield, including its own
- * if it watches for other permanents entering.
+ * if it watches for other permanents entering. `entry` says whether it was cast, which
+ * decides conditions such as Preston, the Vanisher's "if it wasn't cast"; leave it
+ * undefined when the app does not know and the user is asked.
  */
 export function entersTriggers(
   permanent: BattlefieldPermanent,
   battlefield: BattlefieldPermanent[],
   commanderIds: Set<string>,
+  entry?: Entry,
 ): Suggestion[] {
   const face = permanent.card.faces[permanent.faceIndex] ?? permanent.card.faces[0]
-  const subject: Subject = { card: permanent.card, face, isToken: permanent.isToken }
+  const subject: Subject = {
+    card: permanent.card,
+    face,
+    isToken: permanent.isToken,
+    wasCast: entry === undefined ? undefined : entry === 'cast',
+  }
+  const event: TriggerEvent = { kind: 'enters', entering: subject }
   const suggestions: Suggestion[] = []
 
   for (const ability of triggeredAbilities(permanent.card, permanent.faceIndex)) {
-    if (!OWN_ENTERS_PATTERN.test(ability.text)) continue
-    if (SELF_OR_ANOTHER_ENTERS_PATTERN.test(ability.text)) continue
-    const condition = interveningIf(ability.text)
+    const text = stripAbilityWord(ability.text)
+    if (!OWN_ENTERS_PATTERN.test(text)) continue
+    if (SELF_OR_ANOTHER_ENTERS_PATTERN.test(text)) continue
+    const condition = interveningIf(text)
     suggestions.push({
       source: permanent.card,
       sourceFaceIndex: permanent.faceIndex,
       ability,
       certain: condition ? undefined : true,
       uncertainReason: condition,
-      ...doublersFor(permanent.card, battlefield),
+      ...doublersFor(permanent.card, battlefield, event),
       fromCommander: commanderIds.has(permanent.card.oracleId),
       copiesSpell: false,
     })
@@ -448,7 +528,7 @@ export function entersTriggers(
 
   for (const watcher of battlefield) {
     for (const ability of triggeredAbilities(watcher.card, watcher.faceIndex)) {
-      const clean = ability.text.replace(/\s*\([^)]*\)/g, '')
+      const clean = stripAbilityWord(ability.text).replace(/\s*\([^)]*\)/g, '')
       const match = ENTERS_PATTERN.exec(clean) ?? SELF_OR_ANOTHER_ENTERS_PATTERN.exec(clean)
       if (!match) continue
       const isSelf = watcher.id === permanent.id
@@ -463,7 +543,7 @@ export function entersTriggers(
           sourceFaceIndex: watcher.faceIndex,
           ability,
           certain: true,
-          ...doublersFor(watcher.card, battlefield),
+          ...doublersFor(watcher.card, battlefield, event),
           fromCommander: commanderIds.has(watcher.card.oracleId),
           copiesSpell: false,
         })
@@ -477,7 +557,8 @@ export function entersTriggers(
         ability,
         certain: evaluation.result,
         uncertainReason: evaluation.reason,
-        ...doublersFor(watcher.card, battlefield),
+        dependsOnEntry: evaluation.dependsOnEntry,
+        ...doublersFor(watcher.card, battlefield, event),
         fromCommander: commanderIds.has(watcher.card.oracleId),
         copiesSpell: false,
       })
@@ -485,6 +566,109 @@ export function entersTriggers(
   }
 
   return orderForStack(suggestions)
+}
+
+/**
+ * The permanent's own "when this leaves the battlefield" abilities. These look back in
+ * time (CR 603.10a), so they trigger even though the permanent is already gone.
+ */
+export function leavesTriggers(
+  permanent: BattlefieldPermanent,
+  battlefield: BattlefieldPermanent[],
+  commanderIds: Set<string>,
+): Suggestion[] {
+  const suggestions: Suggestion[] = []
+  for (const ability of triggeredAbilities(permanent.card, permanent.faceIndex)) {
+    const text = stripAbilityWord(ability.text)
+    if (!OWN_LEAVES_PATTERN.test(text)) continue
+    const condition = interveningIf(text)
+    suggestions.push({
+      source: permanent.card,
+      sourceFaceIndex: permanent.faceIndex,
+      ability,
+      certain: condition ? undefined : true,
+      uncertainReason: condition,
+      ...doublersFor(permanent.card, battlefield, { kind: 'leaves' }),
+      fromCommander: commanderIds.has(permanent.card.oracleId),
+      copiesSpell: false,
+    })
+  }
+  return orderForStack(suggestions)
+}
+
+/**
+ * Triggers to offer when a permanent is blinked: exiled and returned at once. It leaves,
+ * then comes back as a new object that was not cast (CR 400.7), so its leaves triggers
+ * and the full set of enters triggers go on the stack together. A token that leaves the
+ * battlefield ceases to exist and never returns (CR 111.8), so only its leaves triggers
+ * are offered.
+ */
+export function blinkTriggers(
+  permanent: BattlefieldPermanent,
+  battlefield: BattlefieldPermanent[],
+  commanderIds: Set<string>,
+): Suggestion[] {
+  const leaves = leavesTriggers(permanent, battlefield, commanderIds)
+  if (permanent.isToken) return leaves
+  return [...leaves, ...entersTriggers(permanent, battlefield, commanderIds, 'notCast')]
+}
+
+/**
+ * What a resolving spell or ability may put onto the battlefield, read from its text, so
+ * the app can ask what entered and offer the enters triggers.
+ *
+ * - blink: exiles a permanent and returns it straight away (Cloudshift, Ephemerate,
+ *   Restoration Angel, Teleportation Circle). Returns that happen "at the beginning of the
+ *   next end step" are not included; the ↻ button on the battlefield covers those.
+ * - fromElsewhere: puts or returns cards onto the battlefield from a library, graveyard
+ *   or hand (Dack Fayden, Sun Titan, Karmic Guide). `several` when more than one card may
+ *   enter; `keeps` is false when the text hands the permanents to opponents, as Dack
+ *   Fayden does. Basic lands and Plains fetched by ramp pieces are skipped: nothing in a
+ *   deck watches for them and the picker would only get in the way.
+ * - tokenCopy: creates a token copy of a creature or permanent (Preston, the Vanisher,
+ *   embalm). The token enters, so its own enters triggers fire again.
+ */
+export type EntryEffect =
+  | { kind: 'blink' }
+  | {
+      kind: 'fromElsewhere'
+      several: boolean
+      keeps: boolean
+      /** The card type the effect names ("creature cards", "permanent card"), to narrow the picker. */
+      cardType?: string
+    }
+  | { kind: 'tokenCopy' }
+
+export function entryEffect(text: string): EntryEffect | null {
+  const clean = text.replace(/\s*\([^)]*\)/g, '')
+  if (
+    /\bexile\b[^.]*?\btarget\b[^.]*?, then return (?:it|that card|them|those cards) to the battlefield\b/i.test(
+      clean,
+    )
+  ) {
+    return { kind: 'blink' }
+  }
+  // Embalm's copy is in its reminder text, so this one reads the raw line.
+  if (/\bcreate a token that's a copy of (?:that|target|it\b)/i.test(text)) {
+    return { kind: 'tokenCopy' }
+  }
+  for (const sentence of clean.split(/(?<=\.)\s+/)) {
+    const match = /\b(?:put|return)\b(.*?)\b(?:onto|to) the battlefield\b/i.exec(sentence)
+    if (!match) continue
+    if (/\bat the beginning of\b/i.test(sentence)) continue
+    if (/\b(?:basic|Plains|land cards?)\b/.test(sentence)) continue
+    const object = match[1]
+    const cardType = /\b(creature|artifact|enchantment|planeswalker|land|permanent)\b/i.exec(
+      object,
+    )?.[1]
+    return {
+      kind: 'fromElsewhere',
+      several: /\b(?:cards|those|them|each|all)\b/i.test(object),
+      keeps: !/\bopponents? gains? control\b/i.test(clean),
+      ...(cardType ? { cardType: cardType.toLowerCase() } : {}),
+    }
+  }
+  return null
 }
 
 /**

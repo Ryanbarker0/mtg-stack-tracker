@@ -1211,3 +1211,41 @@ a {
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
 }
+
+/* Battlefield chips carry two actions, so the chip is a group rather than one button */
+
+.battlefield .chip-group {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 2px 0 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-overlay);
+  gap: 2px;
+}
+
+.battlefield .chip-group.token {
+  border-style: dashed;
+}
+
+.battlefield .chip-group .faint {
+  margin-left: 4px;
+}
+
+.battlefield .chip-group button.icon {
+  min-height: 28px;
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 15px;
+}
+
+.battlefield .chip-group button.icon.reenter {
+  color: var(--accent);
+}

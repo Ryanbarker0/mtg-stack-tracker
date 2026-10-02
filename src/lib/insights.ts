@@ -1,3 +1,4 @@
+import { entryEffect } from './triggers'
 import type { StackItem } from './types'
 
 /**
@@ -54,9 +55,32 @@ export function explain(item: StackItem, stack: StackItem[]): Insight {
     }
   }
 
-  if (origin.some((o) => /^Doubled by/.test(o))) {
+  const doubledBy = origin.find((o) => /^Doubled by/.test(o))?.replace(/^Doubled by /, '')
+  if (doubledBy) {
     why.push(
-      'This ability triggered an extra time because a colorless permanent or spell you control has a doubler out. Each instance is a separate object with its own choices.',
+      `This ability triggered an extra time because of ${doubledBy} (CR 603.2d). Each instance is a separate ability with its own targets and choices.`,
+    )
+  }
+
+  if (origin.some((o) => /\bblinked$/.test(o))) {
+    why.push(
+      `${origin.find((o) => /\bblinked$/.test(o))?.replace(/ blinked$/, '')} left the battlefield and came back as a new object with no memory of what it was (CR 400.7). It was not cast this time, so nothing that says "when you cast" fires, but its enters abilities and anything watching for it entering do.`,
+    )
+  }
+
+  if (kind === 'triggered' && /leaves the battlefield/i.test(item.text)) {
+    why.push(
+      'Leaves-the-battlefield abilities look back in time (CR 603.10a): they trigger based on how things were just before the permanent left, so it being gone does not stop them.',
+    )
+  }
+
+  if (
+    kind === 'triggered' &&
+    item.kind !== 'copy' &&
+    origin.some((o) => /\bentering( again)?$/.test(o))
+  ) {
+    why.push(
+      'Enters triggers go on the stack the next time a player would receive priority. When several trigger at once, their controller puts them on the stack in any order (CR 603.3b).',
     )
   }
 
@@ -119,6 +143,15 @@ export function explain(item: StackItem, stack: StackItem[]): Insight {
       'Your choice: pay {C}{C} and copy everything else you control, or decline and nothing happens.'
   } else if (kind === 'spell' && item.kind === 'copy') {
     onResolve = 'Becomes a token on the battlefield.'
+  } else if (entryEffect(item.text)?.kind === 'blink') {
+    onResolve =
+      'A permanent leaves and comes back at once. The app asks which one, then offers its leaves and enters triggers.'
+  } else if (entryEffect(item.text)?.kind === 'tokenCopy') {
+    onResolve =
+      'A token copy enters the battlefield. The app asks what it copies, then offers its enters triggers.'
+  } else if (entryEffect(item.text)?.kind === 'fromElsewhere') {
+    onResolve =
+      'Cards are put onto the battlefield without being cast. The app asks what entered, then offers its enters triggers.'
   } else if (kind === 'spell') {
     onResolve = /\b(Instant|Sorcery)\b/.test(item.text)
       ? 'Does what it says.'
